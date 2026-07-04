@@ -23,7 +23,8 @@
 }
 
 .app-header {
-  padding: 16px 20px 12px;
+  padding: calc(16px + env(safe-area-inset-top, 0px)) calc(20px + env(safe-area-inset-right, 0px)) 12px
+    calc(20px + env(safe-area-inset-left, 0px));
   background: var(--surface);
   border-bottom: 1px solid var(--surface2);
 }
