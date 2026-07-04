@@ -56,6 +56,8 @@ export default function MethodTrainer({ method, methodName, onMethodChange }: Pr
   if (error) return <p className="feedback err">Could not build method: {error}</p>
 
   const finished = index >= rows.length - 1
+  // Genuinely check the last row is rounds — a random touch usually won't be.
+  const cameRound = rows.length > 0 && rows[rows.length - 1].isRounds()
   const requiredMove: Move | null = finished
     ? null
     : (Math.sign(
@@ -70,7 +72,11 @@ export default function MethodTrainer({ method, methodName, onMethodChange }: Pr
       const next = index + 1
       setIndex(next)
       if (next >= rows.length - 1) {
-        setFeedback({ kind: 'done', msg: '🎉 That’s all — it comes round!' })
+        setFeedback(
+          cameRound
+            ? { kind: 'done', msg: '🎉 That’s all — it comes round!' }
+            : { kind: 'done', msg: 'End of the touch — but this random calling didn’t come round. (Loading real compositions is coming.)' },
+        )
       } else {
         setFeedback({ kind: 'ok', msg: 'Correct — next row.' })
       }
@@ -134,26 +140,28 @@ export default function MethodTrainer({ method, methodName, onMethodChange }: Pr
       </div>
 
       <div className="trainer-controls">
-        <div className={currentCall ? 'call-banner show' : 'call-banner'} aria-live="assertive">
-          {currentCall ? `🔔 ${currentCall}!` : ''}
-        </div>
+        <div className="trainer-controls-inner">
+          <div className={currentCall ? 'call-banner show' : 'call-banner'} aria-live="assertive">
+            {currentCall ? `🔔 ${currentCall}!` : ''}
+          </div>
 
-        {feedback ? (
-          <div className={`feedback ${feedback.kind}`}>{feedback.msg}</div>
-        ) : (
-          <div className="feedback">Move your bell to the next row.</div>
-        )}
+          {feedback ? (
+            <div className={`feedback ${feedback.kind}`}>{feedback.msg}</div>
+          ) : (
+            <div className="feedback">Move your bell to the next row.</div>
+          )}
 
-        <div className="move-buttons">
-          <button className="down" onClick={() => handleMove(-1)} disabled={finished}>
-            <span className="sym">◀</span> Down
-          </button>
-          <button className="stay" onClick={() => handleMove(0)} disabled={finished}>
-            <span className="sym">■</span> Place
-          </button>
-          <button className="up" onClick={() => handleMove(1)} disabled={finished}>
-            Up <span className="sym">▶</span>
-          </button>
+          <div className="move-buttons">
+            <button className="down" onClick={() => handleMove(-1)} disabled={finished}>
+              <span className="sym">◀</span> Down
+            </button>
+            <button className="stay" onClick={() => handleMove(0)} disabled={finished}>
+              <span className="sym">■</span> Place
+            </button>
+            <button className="up" onClick={() => handleMove(1)} disabled={finished}>
+              Up <span className="sym">▶</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>

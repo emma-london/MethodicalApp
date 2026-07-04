@@ -106,9 +106,10 @@ select, .btn {
 .legend span { display: inline-flex; align-items: center; gap: 6px; }
 .swatch { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
 
-/* Trainer — normal page flow; the control bar sticks to the bottom of the
-   viewport as the rows grow, so the buttons stay under your fingers. */
-.trainer { display: block; }
+/* Trainer — the control bar is fixed to the bottom of the viewport so the
+   buttons stay under your fingers no matter how many rows have come in.
+   The bottom padding reserves room so rows can scroll clear of the bar. */
+.trainer { display: block; padding-bottom: 184px; }
 
 .trainer-rows-area {
   background: var(--surface);
@@ -124,12 +125,17 @@ select, .btn {
 
 /* Pinned bottom control bar: call banner, feedback, and the move buttons */
 .trainer-controls {
-  position: sticky;
+  position: fixed;
+  left: 0;
+  right: 0;
   bottom: 0;
-  padding: 10px 0 8px;
+  z-index: 20;
+  padding: 10px 20px calc(10px + env(safe-area-inset-bottom, 0px));
   background: var(--bg);
-  box-shadow: 0 -12px 16px -10px rgba(0, 0, 0, 0.6);
+  border-top: 1px solid var(--surface2);
+  box-shadow: 0 -12px 20px -8px rgba(0, 0, 0, 0.7);
 }
+.trainer-controls-inner { max-width: 760px; margin: 0 auto; }
 
 .call-banner {
   text-align: center;
