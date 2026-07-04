@@ -5,4 +5,10 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   base: '/MethodicalApp/',
+  optimizeDeps: {
+    // Pre-bundle the whole library once at startup. Without this, importing a
+    // new export from ringing-lib-ts mid-session makes Vite re-optimize and
+    // force a full page reload (the "spinning wheel" on every change).
+    include: ['ringing-lib-ts'],
+  },
 })
