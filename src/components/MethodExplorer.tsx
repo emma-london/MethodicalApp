@@ -16,7 +16,7 @@ type View = 'numbers' | 'blueline'
 export default function MethodExplorer({ method, methodName, onMethodChange }: Props) {
   const [view, setView] = useState<View>('numbers')
   const [workingBell, setWorkingBell] = useState(1) // 0-based; default the "2"
-  const [rowHeight, setRowHeight] = useState(9) // blue line vertical spacing (px)
+  const [rowHeight, setRowHeight] = useState(6) // blue line vertical spacing (px); lower = squashed
 
   const { rows, leadLength, error } = useMemo(() => {
     try {
@@ -59,8 +59,8 @@ export default function MethodExplorer({ method, methodName, onMethodChange }: P
               id="zoom"
               className="zoom-range"
               type="range"
-              min={5}
-              max={18}
+              min={4}
+              max={16}
               step={1}
               value={rowHeight}
               onChange={(e) => setRowHeight(Number(e.target.value))}

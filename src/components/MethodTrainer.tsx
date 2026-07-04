@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { bellToChar } from 'ringing-lib-ts'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Row, standardCalls, bellToChar } from 'ringing-lib-ts'
+import type { Method, CallDefinition } from 'ringing-lib-ts'
 import type { MethodDef } from '../data/methods'
-import { buildMethod, plainCourseRows, randomTouchRows } from '../logic/course'
+import { buildMethod, generateLeads } from '../logic/course'
 import MethodPicker from './MethodPicker'
 
 interface Props {
@@ -13,49 +14,93 @@ interface Props {
 type Mode = 'plain' | 'touch'
 type Move = -1 | 0 | 1
 
-const EMPTY_CALLS = new Map<number, string>()
+interface Session {
+  rows: Row[]
+  callsAt: Map<number, string>
+  callMarks: Map<number, string>
+}
+
+const INITIAL_LEADS = 8
+const EXTEND_LEADS = 8
+// Append more leads once the current position is within this many rows of the end.
+const EXTEND_BUFFER = 40
+
+function safeStandardCalls(m: Method): CallDefinition[] {
+  try {
+    return standardCalls(m)
+  } catch {
+    return []
+  }
+}
+
+function makeSession(def: MethodDef, mode: Mode, trebleLeadOffset: number): Session {
+  const m = buildMethod(def)
+  const calls = mode === 'touch' ? safeStandardCalls(m) : []
+  const rounds = Row.rounds(m.stage)
+  const b = generateLeads(m, rounds, INITIAL_LEADS, calls, trebleLeadOffset, 0)
+  return { rows: [rounds, ...b.rows], callsAt: b.callsAt, callMarks: b.callMarks }
+}
+
+const EMPTY_SESSION: Session = { rows: [], callsAt: new Map(), callMarks: new Map() }
 
 export default function MethodTrainer({ method, methodName, onMethodChange }: Props) {
   const [mode, setMode] = useState<Mode>('plain')
   const [workingBell, setWorkingBell] = useState(1)
-  const [seed, setSeed] = useState(0) // bump to regenerate a touch / restart
+  const [seed, setSeed] = useState(0) // bump to restart
   const [index, setIndex] = useState(0)
   const [feedback, setFeedback] = useState<{ kind: 'ok' | 'err' | 'done'; msg: string } | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const currentRowRef = useRef<HTMLDivElement>(null)
   const moveRef = useRef<(m: Move) => void>(() => {})
 
   const wb = Math.min(workingBell, method.stage - 1)
-
   // Grandsire's call work starts two blows before the treble's first lead blow.
   const trebleLeadOffset = /grandsire/i.test(method.name) ? 2 : 0
 
-  const { rows, calling, callsAt, callMarks, error } = useMemo(() => {
-    try {
-      const m = buildMethod(method)
-      if (mode === 'plain') {
-        return { rows: plainCourseRows(m), calling: '', callsAt: EMPTY_CALLS, callMarks: EMPTY_CALLS, error: null as string | null }
-      }
-      const t = randomTouchRows(m, { trebleLeadOffset })
-      return { rows: t.rows, calling: t.calling, callsAt: t.callsAt, callMarks: t.callMarks, error: null }
-    } catch (e) {
-      return { rows: [], calling: '', callsAt: EMPTY_CALLS, callMarks: EMPTY_CALLS, error: (e as Error).message }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [method, mode, seed])
+  const [session, setSession] = useState<Session>(EMPTY_SESSION)
 
-  // Restart whenever the exercise changes.
+  // (Re)build the session whenever the method, mode, or restart seed changes.
   useEffect(() => {
+    try {
+      setSession(makeSession(method, mode, trebleLeadOffset))
+      setError(null)
+    } catch (e) {
+      setSession(EMPTY_SESSION)
+      setError((e as Error).message)
+    }
     setIndex(0)
     setFeedback(null)
-  }, [rows])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [method, mode, seed, trebleLeadOffset])
+
+  const { rows, callsAt, callMarks } = session
+
+  // Append more leads so the session never runs out.
+  const extend = useCallback(() => {
+    setSession((prev) => {
+      if (prev.rows.length === 0) return prev
+      try {
+        const m = buildMethod(method)
+        const calls = mode === 'touch' ? safeStandardCalls(m) : []
+        const last = prev.rows[prev.rows.length - 1]
+        const b = generateLeads(m, last, EXTEND_LEADS, calls, trebleLeadOffset, prev.rows.length - 1)
+        const nextCallsAt = new Map(prev.callsAt)
+        b.callsAt.forEach((v, k) => nextCallsAt.set(k, v))
+        const nextCallMarks = new Map(prev.callMarks)
+        b.callMarks.forEach((v, k) => nextCallMarks.set(k, v))
+        return { rows: [...prev.rows, ...b.rows], callsAt: nextCallsAt, callMarks: nextCallMarks }
+      } catch {
+        return prev
+      }
+    })
+  }, [method, mode, trebleLeadOffset])
 
   // Keep the current row in view (centred above the sticky control bar).
   useEffect(() => {
     currentRowRef.current?.scrollIntoView({ block: 'center', behavior: 'auto' })
   }, [index, rows])
 
-  // Keyboard shortcuts: V = Down, B = Place, N = Up. moveRef always points at
-  // the latest handler, so the listener can be registered once.
+  // Keyboard shortcuts: V = Down, B = Place, N = Up.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null
@@ -74,42 +119,34 @@ export default function MethodTrainer({ method, methodName, onMethodChange }: Pr
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
-  if (error) return <p className="feedback err">Could not build method: {error}</p>
-
-  const finished = index >= rows.length - 1
-  // Genuinely check the last row is rounds — a random touch usually won't be.
-  const cameRound = rows.length > 0 && rows[rows.length - 1].isRounds()
-  const requiredMove: Move | null = finished
-    ? null
-    : (Math.sign(
-        rows[index + 1].toArray().indexOf(wb) - rows[index].toArray().indexOf(wb),
-      ) as Move)
+  const requiredMove: Move | null =
+    index + 1 < rows.length
+      ? (Math.sign(rows[index + 1].toArray().indexOf(wb) - rows[index].toArray().indexOf(wb)) as Move)
+      : null
 
   const currentCall = callsAt.get(index) ?? null
 
   const handleMove = (move: Move) => {
-    if (finished) return
+    if (requiredMove === null) return
     if (move === requiredMove) {
       const next = index + 1
       setIndex(next)
-      if (next >= rows.length - 1) {
-        setFeedback(
-          cameRound
-            ? { kind: 'done', msg: '🎉 That’s all — it comes round!' }
-            : { kind: 'done', msg: 'End of the touch — but this random calling didn’t come round. (Loading real compositions is coming.)' },
-        )
-      } else {
-        setFeedback({ kind: 'ok', msg: 'Correct — next row.' })
-      }
+      if (next >= rows.length - EXTEND_BUFFER) extend()
+      setFeedback(
+        rows[next].isRounds()
+          ? { kind: 'done', msg: '🎉 Rounds! Keep going…' }
+          : { kind: 'ok', msg: 'Correct — next row.' },
+      )
     } else {
       setFeedback({ kind: 'err', msg: 'Not quite — try again. Watch where your bell needs to go.' })
     }
   }
-
   // Keep the keyboard handler pointing at the current closure.
   moveRef.current = handleMove
 
   const restart = () => setSeed((s) => s + 1)
+
+  if (error) return <p className="feedback err">Could not build method: {error}</p>
 
   // Show a trailing window of revealed rows.
   const from = Math.max(0, index - 9)
@@ -135,9 +172,8 @@ export default function MethodTrainer({ method, methodName, onMethodChange }: Pr
       </div>
 
       <p className="meta">
-        You are ringing <strong>{bellToChar(wb)}</strong> · {method.name}
-        {mode === 'touch' && calling ? <> · touch: <code>{calling}</code></> : null}
-        {' '}· row {index + 1} of {rows.length}
+        You are ringing <strong>{bellToChar(wb)}</strong> · {method.name} ·{' '}
+        {mode === 'touch' ? 'touch (endless)' : 'plain course (endless)'} · row {index + 1}
       </p>
 
       <div className="trainer-rows-area">
@@ -161,7 +197,7 @@ export default function MethodTrainer({ method, methodName, onMethodChange }: Pr
               </div>
             )
           })}
-          {!finished && <div className="row placeholder">{'·'.repeat(method.stage)}</div>}
+          <div className="row placeholder">{'·'.repeat(method.stage)}</div>
         </div>
       </div>
 
@@ -178,13 +214,13 @@ export default function MethodTrainer({ method, methodName, onMethodChange }: Pr
           )}
 
           <div className="move-buttons">
-            <button className="down" onClick={() => handleMove(-1)} disabled={finished}>
+            <button className="down" onClick={() => handleMove(-1)}>
               <span className="sym">◀</span> Down <kbd>V</kbd>
             </button>
-            <button className="stay" onClick={() => handleMove(0)} disabled={finished}>
+            <button className="stay" onClick={() => handleMove(0)}>
               <span className="sym">■</span> Place <kbd>B</kbd>
             </button>
-            <button className="up" onClick={() => handleMove(1)} disabled={finished}>
+            <button className="up" onClick={() => handleMove(1)}>
               Up <span className="sym">▶</span> <kbd>N</kbd>
             </button>
           </div>

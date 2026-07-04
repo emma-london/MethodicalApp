@@ -1,5 +1,5 @@
 // Wrappers over ringing-lib-ts that produce the row sequences the UI needs.
-import { Method, Row, Composition, Touch, standardCalls } from 'ringing-lib-ts'
+import { Method, Row } from 'ringing-lib-ts'
 import type { CallDefinition } from 'ringing-lib-ts'
 import type { MethodDef } from '../data/methods'
 
@@ -26,77 +26,75 @@ export function plainCourseRows(method: Method): Row[] {
   return rows
 }
 
-export interface TouchResult {
+export interface LeadBatch {
+  /** The rows produced (not including the starting row). */
   rows: Row[]
-  calling: string
   /**
-   * Row index -> call label ("Bob" / "Single"), covering each call from the
-   * moment it is announced through to the lead-end change it affects. Used to
-   * flash a notification in the trainer at the right time.
+   * Absolute row index -> call label ("Bob" / "Single"), covering each call from
+   * the moment it is announced through to the lead-end change it affects. Used
+   * to flash the call notification at the right time.
    */
   callsAt: Map<number, string>
   /**
-   * Lead-head row index -> call label. One entry per call, at the row where the
-   * call takes effect — used to mark the call beside the rows list, as a
-   * written composition would.
+   * Absolute lead-head row index -> call label. One entry per call, at the row
+   * where the call takes effect — used to mark it beside the rows list.
    */
   callMarks: Map<number, string>
-}
-
-export interface TouchOptions {
-  leads?: number
-  /**
-   * How many rows before the treble's first blow in lead the call is announced.
-   * 0 for most methods (the conductor calls as the treble makes its first blow
-   * in lead); 2 for Grandsire, where the affected work starts two blows earlier.
-   */
-  trebleLeadOffset?: number
+  /** The last row produced (a lead head) — the start point for the next batch. */
+  endRow: Row
 }
 
 /**
- * Generate a randomly-called touch of `leads` leads. Calls are chosen from the
- * method's standard calls; for now this is random, not a real composition —
- * loading a real composition is a future enhancement.
+ * Generate `numLeads` leads starting immediately after `startRow` (which is not
+ * itself included). When `calls` is non-empty each lead end is chosen at random
+ * (weighted towards plain); with an empty `calls` array every lead is plain.
+ *
+ * This works from any lead head, so the trainer can extend a session forever by
+ * calling it again from the previous `endRow`. Row indices in the returned maps
+ * are absolute, offset by `absOffset` (the index of `startRow` in the full list).
  */
-export function randomTouchRows(method: Method, opts: TouchOptions = {}): TouchResult {
-  const { leads = 8, trebleLeadOffset = 0 } = opts
-  let calls: CallDefinition[]
-  try {
-    calls = standardCalls(method)
-  } catch {
-    calls = []
-  }
-  const nameBySymbol = new Map(calls.map((c) => [c.symbol, c.name]))
-  const symbols = calls.map((c) => c.symbol)
-  // Weight towards plain leads so a touch still resembles the method.
-  const pool = ['.', '.', '.', ...symbols]
-  let calling = ''
-  for (let i = 0; i < leads; i++) {
-    calling += pool[Math.floor(Math.random() * pool.length)]
-  }
-  const composition = Composition.fromCalling(method, calling, { calls })
-  const rows = new Touch(composition).toArray()
-
-  // A call on lead L affects the change into that lead's lead head
-  // (row index (L+1)*leadLength). It is announced as the treble makes its first
-  // blow in lead — the row just before that lead head — offset earlier for
-  // Grandsire. We flag the rows from the announcement through the lead head so
-  // the notification stays visible across the affected change.
+export function generateLeads(
+  method: Method,
+  startRow: Row,
+  numLeads: number,
+  calls: CallDefinition[],
+  trebleLeadOffset: number,
+  absOffset: number,
+): LeadBatch {
   const leadLength = method.leadLength
+  const changes = [...method] // the plain lead's changes
+  const callBySymbol = new Map(calls.map((c) => [c.symbol, c]))
+  const pool = ['.', '.', '.', ...calls.map((c) => c.symbol)]
+
+  const rows: Row[] = []
   const callsAt = new Map<number, string>()
   const callMarks = new Map<number, string>()
-  for (let lead = 0; lead < calling.length; lead++) {
-    const symbol = calling[lead]
-    const name = nameBySymbol.get(symbol)
-    if (symbol === '.' || name === undefined) continue
-    const leadHeadRow = (lead + 1) * leadLength
-    const announceRow = leadHeadRow - 1 - trebleLeadOffset
-    for (let r = Math.max(0, announceRow); r <= leadHeadRow && r < rows.length; r++) {
-      callsAt.set(r, name)
+  let row = startRow
+
+  for (let l = 0; l < numLeads; l++) {
+    const symbol = calls.length ? pool[Math.floor(Math.random() * pool.length)] : '.'
+    const call = symbol === '.' ? undefined : callBySymbol.get(symbol)
+
+    // A call replaces the tail changes of the lead with its own.
+    const base = changes.slice()
+    if (call) {
+      const k = call.changes.length
+      for (let j = 0; j < k; j++) base[base.length - k + j] = call.changes[j]
     }
-    if (leadHeadRow < rows.length) callMarks.set(leadHeadRow, name)
+    for (const ch of base) {
+      row = ch.apply(row)
+      rows.push(row)
+    }
+
+    if (call) {
+      const leadHeadAbs = absOffset + (l + 1) * leadLength
+      callMarks.set(leadHeadAbs, call.name)
+      const announce = leadHeadAbs - 1 - trebleLeadOffset
+      for (let r = Math.max(0, announce); r <= leadHeadAbs; r++) callsAt.set(r, call.name)
+    }
   }
-  return { rows, calling, callsAt, callMarks }
+
+  return { rows, callsAt, callMarks, endRow: row }
 }
 
 /** 0-based place (position, 0 = front/lead) of `bell` in each row. */

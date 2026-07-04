@@ -95,15 +95,23 @@ select, .btn {
 .seg button { background: var(--surface); border: none; color: var(--text-muted); padding: 8px 14px; cursor: pointer; font-size: 0.85rem; }
 .seg button.active { background: var(--surface2); color: var(--accent2); }
 
-/* Numbers grid */
-.rows-grid { font-family: ui-monospace, monospace; font-size: var(--row-size); line-height: 1.5; letter-spacing: 0.35em; }
-.rows-grid .row { white-space: pre; }
+/* Numbers grid — bells spread across the width so it fills the screen */
+.rows-grid { font-family: ui-monospace, monospace; font-size: clamp(16px, 5vw, 22px); line-height: 1.5; }
+.rows-grid .row {
+  display: flex;
+  justify-content: space-between;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 1px 6px;
+}
+.rows-grid .row span { flex: 0 0 auto; text-align: center; }
 .rows-grid .b-treble { color: var(--treble); font-weight: 700; }
 .rows-grid .b-work { color: var(--workbell); font-weight: 700; }
 .rows-grid .lead-end { border-bottom: 1px dashed var(--text-muted); }
 
 /* Blueline */
-.blueline-wrap { overflow-x: auto; background: var(--surface); border-radius: 8px; padding: 12px; }
+.blueline-wrap { overflow-x: auto; background: var(--surface); border-radius: 8px; padding: 12px; text-align: center; }
+.blueline-wrap svg { display: inline-block; }
 .legend { display: flex; gap: 16px; font-size: 0.8rem; margin-bottom: 10px; }
 .legend span { display: inline-flex; align-items: center; gap: 6px; }
 .swatch { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
