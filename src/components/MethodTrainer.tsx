@@ -21,7 +21,7 @@ export default function MethodTrainer({ method, methodName, onMethodChange }: Pr
   const [seed, setSeed] = useState(0) // bump to regenerate a touch / restart
   const [index, setIndex] = useState(0)
   const [feedback, setFeedback] = useState<{ kind: 'ok' | 'err' | 'done'; msg: string } | null>(null)
-  const rowsAreaRef = useRef<HTMLDivElement>(null)
+  const currentRowRef = useRef<HTMLDivElement>(null)
 
   const wb = Math.min(workingBell, method.stage - 1)
 
@@ -48,10 +48,9 @@ export default function MethodTrainer({ method, methodName, onMethodChange }: Pr
     setFeedback(null)
   }, [rows])
 
-  // Keep the current row in view as it advances.
+  // Keep the current row in view (centred above the sticky control bar).
   useEffect(() => {
-    const el = rowsAreaRef.current
-    if (el) el.scrollTop = el.scrollHeight
+    currentRowRef.current?.scrollIntoView({ block: 'center', behavior: 'auto' })
   }, [index, rows])
 
   if (error) return <p className="feedback err">Could not build method: {error}</p>
@@ -111,13 +110,17 @@ export default function MethodTrainer({ method, methodName, onMethodChange }: Pr
         {' '}· row {index + 1} of {rows.length}
       </p>
 
-      <div className="trainer-rows-area" ref={rowsAreaRef}>
+      <div className="trainer-rows-area">
         <div className="trainer-rows">
           {revealed.map((row, i) => {
             const absolute = from + i
             const isCurrent = absolute === index
             return (
-              <div key={absolute} className={isCurrent ? 'row current' : 'row'}>
+              <div
+                key={absolute}
+                ref={isCurrent ? currentRowRef : undefined}
+                className={isCurrent ? 'row current' : 'row'}
+              >
                 {row.toArray().map((bell, pos) => (
                   <span key={pos} className={bell === wb ? 'b-work' : bell === 0 ? 'b-treble' : undefined}>
                     {bellToChar(bell)}

@@ -15,8 +15,7 @@
 }
 
 .app {
-  flex: 1;
-  min-height: 0;
+  min-height: 100dvh;
   background: var(--bg);
   color: var(--text);
   display: flex;
@@ -56,13 +55,10 @@
 
 .content {
   flex: 1;
-  min-height: 0;
   padding: 16px 20px 20px;
   max-width: 760px;
   width: 100%;
   margin: 0 auto;
-  display: flex;
-  flex-direction: column;
 }
 
 .app-footer {
@@ -110,17 +106,15 @@ select, .btn {
 .legend span { display: inline-flex; align-items: center; gap: 6px; }
 .swatch { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
 
-/* Trainer — fills the content area; rows scroll, controls stay pinned bottom */
-.trainer { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+/* Trainer — normal page flow; the control bar sticks to the bottom of the
+   viewport as the rows grow, so the buttons stay under your fingers. */
+.trainer { display: block; }
 
 .trainer-rows-area {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  overscroll-behavior: contain;
   background: var(--surface);
   border-radius: 10px;
   padding: 16px;
+  min-height: 30vh;
 }
 .trainer-rows { font-family: ui-monospace, monospace; font-size: clamp(16px, 5vw, 24px); line-height: 1.7; letter-spacing: 0.4em; text-align: center; }
 .trainer-rows .row.current { background: var(--surface2); border-radius: 6px; }
@@ -132,8 +126,9 @@ select, .btn {
 .trainer-controls {
   position: sticky;
   bottom: 0;
-  padding-top: 10px;
+  padding: 10px 0 8px;
   background: var(--bg);
+  box-shadow: 0 -12px 16px -10px rgba(0, 0, 0, 0.6);
 }
 
 .call-banner {
