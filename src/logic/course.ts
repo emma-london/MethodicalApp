@@ -29,6 +29,22 @@ export function plainCourseRows(method: Method): Row[] {
 export interface TouchResult {
   rows: Row[]
   calling: string
+  /**
+   * Row index -> call label ("Bob" / "Single"), covering each call from the
+   * moment it is announced through to the lead-end change it affects. Used to
+   * flash a notification in the trainer at the right time.
+   */
+  callsAt: Map<number, string>
+}
+
+export interface TouchOptions {
+  leads?: number
+  /**
+   * How many rows before the treble's first blow in lead the call is announced.
+   * 0 for most methods (the conductor calls as the treble makes its first blow
+   * in lead); 2 for Grandsire, where the affected work starts two blows earlier.
+   */
+  trebleLeadOffset?: number
 }
 
 /**
@@ -36,13 +52,15 @@ export interface TouchResult {
  * method's standard calls; for now this is random, not a real composition —
  * loading a real composition is a future enhancement.
  */
-export function randomTouchRows(method: Method, leads = 8): TouchResult {
+export function randomTouchRows(method: Method, opts: TouchOptions = {}): TouchResult {
+  const { leads = 8, trebleLeadOffset = 0 } = opts
   let calls: CallDefinition[]
   try {
     calls = standardCalls(method)
   } catch {
     calls = []
   }
+  const nameBySymbol = new Map(calls.map((c) => [c.symbol, c.name]))
   const symbols = calls.map((c) => c.symbol)
   // Weight towards plain leads so a touch still resembles the method.
   const pool = ['.', '.', '.', ...symbols]
@@ -52,7 +70,25 @@ export function randomTouchRows(method: Method, leads = 8): TouchResult {
   }
   const composition = Composition.fromCalling(method, calling, { calls })
   const rows = new Touch(composition).toArray()
-  return { rows, calling }
+
+  // A call on lead L affects the change into that lead's lead head
+  // (row index (L+1)*leadLength). It is announced as the treble makes its first
+  // blow in lead — the row just before that lead head — offset earlier for
+  // Grandsire. We flag the rows from the announcement through the lead head so
+  // the notification stays visible across the affected change.
+  const leadLength = method.leadLength
+  const callsAt = new Map<number, string>()
+  for (let lead = 0; lead < calling.length; lead++) {
+    const symbol = calling[lead]
+    const name = nameBySymbol.get(symbol)
+    if (symbol === '.' || name === undefined) continue
+    const leadHeadRow = (lead + 1) * leadLength
+    const announceRow = leadHeadRow - 1 - trebleLeadOffset
+    for (let r = Math.max(0, announceRow); r <= leadHeadRow && r < rows.length; r++) {
+      callsAt.set(r, name)
+    }
+  }
+  return { rows, calling, callsAt }
 }
 
 /** 0-based place (position, 0 = front/lead) of `bell` in each row. */

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { bellToChar } from 'ringing-lib-ts'
 import type { MethodDef } from '../data/methods'
 import { buildMethod, plainCourseRows, randomTouchRows } from '../logic/course'
@@ -13,23 +13,31 @@ interface Props {
 type Mode = 'plain' | 'touch'
 type Move = -1 | 0 | 1
 
+const EMPTY_CALLS = new Map<number, string>()
+
 export default function MethodTrainer({ method, methodName, onMethodChange }: Props) {
   const [mode, setMode] = useState<Mode>('plain')
   const [workingBell, setWorkingBell] = useState(1)
   const [seed, setSeed] = useState(0) // bump to regenerate a touch / restart
   const [index, setIndex] = useState(0)
   const [feedback, setFeedback] = useState<{ kind: 'ok' | 'err' | 'done'; msg: string } | null>(null)
+  const rowsAreaRef = useRef<HTMLDivElement>(null)
 
   const wb = Math.min(workingBell, method.stage - 1)
 
-  const { rows, calling, error } = useMemo(() => {
+  // Grandsire's call work starts two blows before the treble's first lead blow.
+  const trebleLeadOffset = /grandsire/i.test(method.name) ? 2 : 0
+
+  const { rows, calling, callsAt, error } = useMemo(() => {
     try {
       const m = buildMethod(method)
-      if (mode === 'plain') return { rows: plainCourseRows(m), calling: '', error: null as string | null }
-      const t = randomTouchRows(m)
-      return { rows: t.rows, calling: t.calling, error: null }
+      if (mode === 'plain') {
+        return { rows: plainCourseRows(m), calling: '', callsAt: EMPTY_CALLS, error: null as string | null }
+      }
+      const t = randomTouchRows(m, { trebleLeadOffset })
+      return { rows: t.rows, calling: t.calling, callsAt: t.callsAt, error: null }
     } catch (e) {
-      return { rows: [], calling: '', error: (e as Error).message }
+      return { rows: [], calling: '', callsAt: EMPTY_CALLS, error: (e as Error).message }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [method, mode, seed])
@@ -40,6 +48,12 @@ export default function MethodTrainer({ method, methodName, onMethodChange }: Pr
     setFeedback(null)
   }, [rows])
 
+  // Keep the current row in view as it advances.
+  useEffect(() => {
+    const el = rowsAreaRef.current
+    if (el) el.scrollTop = el.scrollHeight
+  }, [index, rows])
+
   if (error) return <p className="feedback err">Could not build method: {error}</p>
 
   const finished = index >= rows.length - 1
@@ -48,6 +62,8 @@ export default function MethodTrainer({ method, methodName, onMethodChange }: Pr
     : (Math.sign(
         rows[index + 1].toArray().indexOf(wb) - rows[index].toArray().indexOf(wb),
       ) as Move)
+
+  const currentCall = callsAt.get(index) ?? null
 
   const handleMove = (move: Move) => {
     if (finished) return
@@ -67,11 +83,11 @@ export default function MethodTrainer({ method, methodName, onMethodChange }: Pr
   const restart = () => setSeed((s) => s + 1)
 
   // Show a trailing window of revealed rows.
-  const from = Math.max(0, index - 7)
+  const from = Math.max(0, index - 9)
   const revealed = rows.slice(from, index + 1)
 
   return (
-    <div>
+    <div className="trainer">
       <div className="controls">
         <MethodPicker methodName={methodName} onMethodChange={onMethodChange} />
         <div className="field">
@@ -95,7 +111,7 @@ export default function MethodTrainer({ method, methodName, onMethodChange }: Pr
         {' '}· row {index + 1} of {rows.length}
       </p>
 
-      <div className="trainer-stage">
+      <div className="trainer-rows-area" ref={rowsAreaRef}>
         <div className="trainer-rows">
           {revealed.map((row, i) => {
             const absolute = from + i
@@ -112,15 +128,30 @@ export default function MethodTrainer({ method, methodName, onMethodChange }: Pr
           })}
           {!finished && <div className="row placeholder">{'·'.repeat(method.stage)}</div>}
         </div>
+      </div>
 
-        <div className="move-buttons">
-          <button className="down" onClick={() => handleMove(-1)} disabled={finished}>▼ Down a place</button>
-          <button className="stay" onClick={() => handleMove(0)} disabled={finished}>■ Make places</button>
-          <button className="up" onClick={() => handleMove(1)} disabled={finished}>▲ Up a place</button>
+      <div className="trainer-controls">
+        <div className={currentCall ? 'call-banner show' : 'call-banner'} aria-live="assertive">
+          {currentCall ? `🔔 ${currentCall}!` : ''}
         </div>
 
-        {feedback && <div className={`feedback ${feedback.kind}`}>{feedback.msg}</div>}
-        {!feedback && <div className="feedback">Move your bell to the next row.</div>}
+        {feedback ? (
+          <div className={`feedback ${feedback.kind}`}>{feedback.msg}</div>
+        ) : (
+          <div className="feedback">Move your bell to the next row.</div>
+        )}
+
+        <div className="move-buttons">
+          <button className="down" onClick={() => handleMove(-1)} disabled={finished}>
+            <span className="sym">◀</span> Down
+          </button>
+          <button className="stay" onClick={() => handleMove(0)} disabled={finished}>
+            <span className="sym">■</span> Place
+          </button>
+          <button className="up" onClick={() => handleMove(1)} disabled={finished}>
+            Up <span className="sym">▶</span>
+          </button>
+        </div>
       </div>
     </div>
   )
