@@ -120,7 +120,23 @@ select, .btn {
   min-height: 30vh;
 }
 .trainer-rows { font-family: ui-monospace, monospace; font-size: clamp(16px, 5vw, 24px); line-height: 1.7; letter-spacing: 0.4em; text-align: center; }
+.trainer-rows .row { position: relative; }
 .trainer-rows .row.current { background: var(--surface2); border-radius: 6px; }
+.call-mark {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: system-ui, -apple-system, sans-serif;
+  letter-spacing: normal;
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 6px;
+  color: var(--bg);
+}
+.call-mark--bob { background: var(--down-color); }
+.call-mark--single { background: var(--accent); }
 .trainer-rows .b-work { color: var(--workbell); font-weight: 800; }
 .trainer-rows .b-treble { color: var(--treble); font-weight: 700; }
 .trainer-rows .placeholder { color: var(--text-muted); }

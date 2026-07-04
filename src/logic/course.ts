@@ -35,6 +35,12 @@ export interface TouchResult {
    * flash a notification in the trainer at the right time.
    */
   callsAt: Map<number, string>
+  /**
+   * Lead-head row index -> call label. One entry per call, at the row where the
+   * call takes effect — used to mark the call beside the rows list, as a
+   * written composition would.
+   */
+  callMarks: Map<number, string>
 }
 
 export interface TouchOptions {
@@ -78,6 +84,7 @@ export function randomTouchRows(method: Method, opts: TouchOptions = {}): TouchR
   // the notification stays visible across the affected change.
   const leadLength = method.leadLength
   const callsAt = new Map<number, string>()
+  const callMarks = new Map<number, string>()
   for (let lead = 0; lead < calling.length; lead++) {
     const symbol = calling[lead]
     const name = nameBySymbol.get(symbol)
@@ -87,8 +94,9 @@ export function randomTouchRows(method: Method, opts: TouchOptions = {}): TouchR
     for (let r = Math.max(0, announceRow); r <= leadHeadRow && r < rows.length; r++) {
       callsAt.set(r, name)
     }
+    if (leadHeadRow < rows.length) callMarks.set(leadHeadRow, name)
   }
-  return { rows, calling, callsAt }
+  return { rows, calling, callsAt, callMarks }
 }
 
 /** 0-based place (position, 0 = front/lead) of `bell` in each row. */

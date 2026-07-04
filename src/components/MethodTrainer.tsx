@@ -29,16 +29,16 @@ export default function MethodTrainer({ method, methodName, onMethodChange }: Pr
   // Grandsire's call work starts two blows before the treble's first lead blow.
   const trebleLeadOffset = /grandsire/i.test(method.name) ? 2 : 0
 
-  const { rows, calling, callsAt, error } = useMemo(() => {
+  const { rows, calling, callsAt, callMarks, error } = useMemo(() => {
     try {
       const m = buildMethod(method)
       if (mode === 'plain') {
-        return { rows: plainCourseRows(m), calling: '', callsAt: EMPTY_CALLS, error: null as string | null }
+        return { rows: plainCourseRows(m), calling: '', callsAt: EMPTY_CALLS, callMarks: EMPTY_CALLS, error: null as string | null }
       }
       const t = randomTouchRows(m, { trebleLeadOffset })
-      return { rows: t.rows, calling: t.calling, callsAt: t.callsAt, error: null }
+      return { rows: t.rows, calling: t.calling, callsAt: t.callsAt, callMarks: t.callMarks, error: null }
     } catch (e) {
-      return { rows: [], calling: '', callsAt: EMPTY_CALLS, error: (e as Error).message }
+      return { rows: [], calling: '', callsAt: EMPTY_CALLS, callMarks: EMPTY_CALLS, error: (e as Error).message }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [method, mode, seed])
@@ -145,6 +145,7 @@ export default function MethodTrainer({ method, methodName, onMethodChange }: Pr
           {revealed.map((row, i) => {
             const absolute = from + i
             const isCurrent = absolute === index
+            const mark = callMarks.get(absolute)
             return (
               <div
                 key={absolute}
@@ -156,6 +157,7 @@ export default function MethodTrainer({ method, methodName, onMethodChange }: Pr
                     {bellToChar(bell)}
                   </span>
                 ))}
+                {mark && <span className={`call-mark call-mark--${mark.toLowerCase()}`}>{mark}</span>}
               </div>
             )
           })}
