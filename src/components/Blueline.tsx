@@ -7,13 +7,14 @@ interface Props {
   rows: Row[]
   stage: number
   workingBell: number // 0-based
+  rowHeight?: number // vertical spacing per row (px); lower = more squashed
 }
 
 const DX = 22
-const DY = 13
 const PAD = 18
 
-export default function Blueline({ rows, stage, workingBell }: Props) {
+export default function Blueline({ rows, stage, workingBell, rowHeight = 9 }: Props) {
+  const dy = rowHeight
   const { treble, work, width, height } = useMemo(() => {
     const treble = bellPath(rows, 0)
     const work = bellPath(rows, workingBell)
@@ -21,12 +22,12 @@ export default function Blueline({ rows, stage, workingBell }: Props) {
       treble,
       work,
       width: (stage - 1) * DX + PAD * 2,
-      height: (rows.length - 1) * DY + PAD * 2,
+      height: (rows.length - 1) * dy + PAD * 2,
     }
-  }, [rows, stage, workingBell])
+  }, [rows, stage, workingBell, dy])
 
   const toPoints = (path: number[]) =>
-    path.map((place, i) => `${place * DX + PAD},${i * DY + PAD}`).join(' ')
+    path.map((place, i) => `${place * DX + PAD},${i * dy + PAD}`).join(' ')
 
   return (
     <div className="blueline-wrap">

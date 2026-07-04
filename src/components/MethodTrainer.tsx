@@ -22,6 +22,7 @@ export default function MethodTrainer({ method, methodName, onMethodChange }: Pr
   const [index, setIndex] = useState(0)
   const [feedback, setFeedback] = useState<{ kind: 'ok' | 'err' | 'done'; msg: string } | null>(null)
   const currentRowRef = useRef<HTMLDivElement>(null)
+  const moveRef = useRef<(m: Move) => void>(() => {})
 
   const wb = Math.min(workingBell, method.stage - 1)
 
@@ -52,6 +53,26 @@ export default function MethodTrainer({ method, methodName, onMethodChange }: Pr
   useEffect(() => {
     currentRowRef.current?.scrollIntoView({ block: 'center', behavior: 'auto' })
   }, [index, rows])
+
+  // Keyboard shortcuts: V = Down, B = Place, N = Up. moveRef always points at
+  // the latest handler, so the listener can be registered once.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null
+      if (t && /^(INPUT|SELECT|TEXTAREA)$/.test(t.tagName)) return
+      if (e.metaKey || e.ctrlKey || e.altKey || e.repeat) return
+      const move: Move | null = e.key === 'v' || e.key === 'V' ? -1
+        : e.key === 'b' || e.key === 'B' ? 0
+        : e.key === 'n' || e.key === 'N' ? 1
+        : null
+      if (move !== null) {
+        e.preventDefault()
+        moveRef.current(move)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   if (error) return <p className="feedback err">Could not build method: {error}</p>
 
@@ -84,6 +105,9 @@ export default function MethodTrainer({ method, methodName, onMethodChange }: Pr
       setFeedback({ kind: 'err', msg: 'Not quite — try again. Watch where your bell needs to go.' })
     }
   }
+
+  // Keep the keyboard handler pointing at the current closure.
+  moveRef.current = handleMove
 
   const restart = () => setSeed((s) => s + 1)
 
@@ -153,13 +177,13 @@ export default function MethodTrainer({ method, methodName, onMethodChange }: Pr
 
           <div className="move-buttons">
             <button className="down" onClick={() => handleMove(-1)} disabled={finished}>
-              <span className="sym">◀</span> Down
+              <span className="sym">◀</span> Down <kbd>V</kbd>
             </button>
             <button className="stay" onClick={() => handleMove(0)} disabled={finished}>
-              <span className="sym">■</span> Place
+              <span className="sym">■</span> Place <kbd>B</kbd>
             </button>
             <button className="up" onClick={() => handleMove(1)} disabled={finished}>
-              Up <span className="sym">▶</span>
+              Up <span className="sym">▶</span> <kbd>N</kbd>
             </button>
           </div>
         </div>

@@ -16,6 +16,7 @@ type View = 'numbers' | 'blueline'
 export default function MethodExplorer({ method, methodName, onMethodChange }: Props) {
   const [view, setView] = useState<View>('numbers')
   const [workingBell, setWorkingBell] = useState(1) // 0-based; default the "2"
+  const [rowHeight, setRowHeight] = useState(9) // blue line vertical spacing (px)
 
   const { rows, leadLength, error } = useMemo(() => {
     try {
@@ -51,6 +52,22 @@ export default function MethodExplorer({ method, methodName, onMethodChange }: P
           <button className={view === 'numbers' ? 'active' : ''} onClick={() => setView('numbers')}>Numbers</button>
           <button className={view === 'blueline' ? 'active' : ''} onClick={() => setView('blueline')}>Blue line</button>
         </div>
+        {view === 'blueline' && (
+          <div className="field">
+            <label htmlFor="zoom">Vertical zoom</label>
+            <input
+              id="zoom"
+              className="zoom-range"
+              type="range"
+              min={5}
+              max={18}
+              step={1}
+              value={rowHeight}
+              onChange={(e) => setRowHeight(Number(e.target.value))}
+              aria-label="Blue line vertical zoom"
+            />
+          </div>
+        )}
       </div>
 
       <p className="meta">
@@ -77,7 +94,7 @@ export default function MethodExplorer({ method, methodName, onMethodChange }: P
           })}
         </div>
       ) : (
-        <Blueline rows={rows} stage={method.stage} workingBell={wb} />
+        <Blueline rows={rows} stage={method.stage} workingBell={wb} rowHeight={rowHeight} />
       )}
     </div>
   )
