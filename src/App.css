@@ -95,16 +95,16 @@ select, .btn {
 .seg button { background: var(--surface); border: none; color: var(--text-muted); padding: 8px 14px; cursor: pointer; font-size: 0.85rem; }
 .seg button.active { background: var(--surface2); color: var(--accent2); }
 
-/* Numbers grid — bells spread across the width so it fills the screen */
-.rows-grid { font-family: ui-monospace, monospace; font-size: clamp(16px, 5vw, 22px); line-height: 1.5; }
-.rows-grid .row {
+/* Numbers grid — packed tight and centred; text size is user-controllable */
+.rows-grid {
   display: flex;
-  justify-content: space-between;
-  max-width: 480px;
-  margin: 0 auto;
-  padding: 1px 6px;
+  flex-direction: column;
+  align-items: center;
+  font-family: ui-monospace, monospace;
+  line-height: 1.45;
+  letter-spacing: 0.05em;
 }
-.rows-grid .row span { flex: 0 0 auto; text-align: center; }
+.rows-grid .row { white-space: pre; }
 .rows-grid .b-treble { color: var(--treble); font-weight: 700; }
 .rows-grid .b-work { color: var(--workbell); font-weight: 700; }
 .rows-grid .lead-end { border-bottom: 1px dashed var(--text-muted); }
@@ -145,8 +145,16 @@ select, .btn {
 }
 .call-mark--bob { background: var(--down-color); }
 .call-mark--single { background: var(--accent); }
-.trainer-rows .b-work { color: var(--workbell); font-weight: 800; }
-.trainer-rows .b-treble { color: var(--treble); font-weight: 700; }
+/* Selected bells: coloured background, near-black font — high contrast for legibility */
+.trainer-rows .b-work,
+.trainer-rows .b-treble {
+  color: #101018;
+  font-weight: 800;
+  border-radius: 5px;
+  padding: 0 0.14em;
+}
+.trainer-rows .b-work { background: var(--workbell); }
+.trainer-rows .b-treble { background: var(--treble); }
 .trainer-rows .placeholder { color: var(--text-muted); }
 
 /* Pinned bottom control bar: call banner, feedback, and the move buttons */

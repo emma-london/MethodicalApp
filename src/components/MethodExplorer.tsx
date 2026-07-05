@@ -17,6 +17,7 @@ export default function MethodExplorer({ method, methodName, onMethodChange }: P
   const [view, setView] = useState<View>('numbers')
   const [workingBell, setWorkingBell] = useState(1) // 0-based; default the "2"
   const [rowHeight, setRowHeight] = useState(6) // blue line vertical spacing (px); lower = squashed
+  const [textSize, setTextSize] = useState(18) // numbers view font size (px)
 
   const { rows, leadLength, error } = useMemo(() => {
     try {
@@ -52,7 +53,7 @@ export default function MethodExplorer({ method, methodName, onMethodChange }: P
           <button className={view === 'numbers' ? 'active' : ''} onClick={() => setView('numbers')}>Numbers</button>
           <button className={view === 'blueline' ? 'active' : ''} onClick={() => setView('blueline')}>Blue line</button>
         </div>
-        {view === 'blueline' && (
+        {view === 'blueline' ? (
           <div className="field">
             <label htmlFor="zoom">Vertical zoom</label>
             <input
@@ -67,6 +68,21 @@ export default function MethodExplorer({ method, methodName, onMethodChange }: P
               aria-label="Blue line vertical zoom"
             />
           </div>
+        ) : (
+          <div className="field">
+            <label htmlFor="textsize">Text size</label>
+            <input
+              id="textsize"
+              className="zoom-range"
+              type="range"
+              min={14}
+              max={40}
+              step={2}
+              value={textSize}
+              onChange={(e) => setTextSize(Number(e.target.value))}
+              aria-label="Numbers text size"
+            />
+          </div>
         )}
       </div>
 
@@ -75,7 +91,7 @@ export default function MethodExplorer({ method, methodName, onMethodChange }: P
       </p>
 
       {view === 'numbers' ? (
-        <div className="rows-grid">
+        <div className="rows-grid" style={{ fontSize: `${textSize}px` }}>
           {rows.map((row, i) => {
             const isLeadHead = i > 0 && i % leadLength === 0
             const chars = row.toArray()
