@@ -12,18 +12,17 @@ export default defineConfig({
     include: ['ringing-lib-ts'],
   },
   server: {
+    // Pin the port so there is ONE canonical dev URL (http://localhost:5173/MethodicalApp/).
+    // Without this, if a previous dev server is still running Vite silently drifts
+    // to 5174/5175, and the old (possibly wedged) server keeps answering the old
+    // URL — which looks like a hang. strictPort makes a leftover server a clear
+    // error ("Port 5173 is in use") instead, so you know to kill it.
+    port: 5173,
+    strictPort: true,
     watch: {
-      // Files here are written by the Cowork sync, often several at once. The
-      // native macOS watcher can read a file mid-write or drop events in a
-      // burst, wedging the dev server (the hang that a restart "fixes").
-      // Polling + awaitWriteFinish detect changes reliably and only after each
-      // file has finished writing, so edits are picked up without a restart.
-      usePolling: true,
-      interval: 250,
-      awaitWriteFinish: {
-        stabilityThreshold: 300,
-        pollInterval: 50,
-      },
+      // Wait for a file to finish writing before processing it — the Cowork sync
+      // can write several files at once, and this avoids reading one mid-write.
+      awaitWriteFinish: { stabilityThreshold: 300, pollInterval: 50 },
     },
   },
 })
