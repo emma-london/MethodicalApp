@@ -12,17 +12,9 @@ export default defineConfig({
     include: ['ringing-lib-ts'],
   },
   server: {
-    // Pin the port so there is ONE canonical dev URL (http://localhost:5173/MethodicalApp/).
-    // Without this, if a previous dev server is still running Vite silently drifts
-    // to 5174/5175, and the old (possibly wedged) server keeps answering the old
-    // URL — which looks like a hang. strictPort makes a leftover server a clear
-    // error ("Port 5173 is in use") instead, so you know to kill it.
-    port: 5173,
+    // Dedicated port for Methodical (5173 is the Call Change App). strictPort
+    // means it fails loudly if 5180 is taken rather than silently moving elsewhere.
+    port: 5180,
     strictPort: true,
-    watch: {
-      // Wait for a file to finish writing before processing it — the Cowork sync
-      // can write several files at once, and this avoids reading one mid-write.
-      awaitWriteFinish: { stabilityThreshold: 300, pollInterval: 50 },
-    },
   },
 })
