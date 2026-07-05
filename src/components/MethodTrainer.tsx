@@ -2,7 +2,10 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Row, standardCalls, bellToChar } from 'ringing-lib-ts'
 import type { Method, CallDefinition } from 'ringing-lib-ts'
 import type { MethodDef } from '../data/methods'
+import { METHODS } from '../data/methods'
+import { SPLICE_SETS } from '../data/spliceSets'
 import { buildMethod, generateLeads } from '../logic/course'
+import type { LeadMethod } from '../logic/course'
 import MethodPicker from './MethodPicker'
 
 interface Props {
@@ -18,12 +21,18 @@ interface Session {
   rows: Row[]
   callsAt: Map<number, string>
   callMarks: Map<number, string>
+  methodAt: Map<number, string>
+  methodMarks: Map<number, string>
+  leadMethodAt: Map<number, string>
 }
 
 const INITIAL_LEADS = 8
 const EXTEND_LEADS = 8
 // Append more leads once the current position is within this many rows of the end.
 const EXTEND_BUFFER = 40
+
+// Grandsire's call work starts two blows before the treble's first lead blow.
+const offsetFor = (name: string) => (/grandsire/i.test(name) ? 2 : 0)
 
 function safeStandardCalls(m: Method): CallDefinition[] {
   try {
@@ -33,18 +42,19 @@ function safeStandardCalls(m: Method): CallDefinition[] {
   }
 }
 
-function makeSession(def: MethodDef, mode: Mode, trebleLeadOffset: number): Session {
-  const m = buildMethod(def)
-  const calls = mode === 'touch' ? safeStandardCalls(m) : []
-  const rounds = Row.rounds(m.stage)
-  const b = generateLeads(m, rounds, INITIAL_LEADS, calls, trebleLeadOffset, 0)
-  return { rows: [rounds, ...b.rows], callsAt: b.callsAt, callMarks: b.callMarks }
+const EMPTY_SESSION: Session = {
+  rows: [],
+  callsAt: new Map(),
+  callMarks: new Map(),
+  methodAt: new Map(),
+  methodMarks: new Map(),
+  leadMethodAt: new Map(),
 }
-
-const EMPTY_SESSION: Session = { rows: [], callsAt: new Map(), callMarks: new Map() }
 
 export default function MethodTrainer({ method, methodName, onMethodChange }: Props) {
   const [mode, setMode] = useState<Mode>('plain')
+  const [spliceMode, setSpliceMode] = useState(false)
+  const [spliceSetName, setSpliceSetName] = useState<string>(SPLICE_SETS[0]?.name ?? '')
   const [workingBell, setWorkingBell] = useState(1)
   const [seed, setSeed] = useState(0) // bump to restart
   const [index, setIndex] = useState(0)
@@ -53,16 +63,44 @@ export default function MethodTrainer({ method, methodName, onMethodChange }: Pr
   const currentRowRef = useRef<HTMLDivElement>(null)
   const moveRef = useRef<(m: Move) => void>(() => {})
 
-  const wb = Math.min(workingBell, method.stage - 1)
-  // Grandsire's call work starts two blows before the treble's first lead blow.
-  const trebleLeadOffset = /grandsire/i.test(method.name) ? 2 : 0
+  const spliceSet = SPLICE_SETS.find((s) => s.name === spliceSetName) ?? SPLICE_SETS[0]
+  const usingSplice = spliceMode && !!spliceSet
+  const effectiveStage = usingSplice ? spliceSet.stage : method.stage
+  const wb = Math.min(workingBell, effectiveStage - 1)
 
   const [session, setSession] = useState<Session>(EMPTY_SESSION)
 
-  // (Re)build the session whenever the method, mode, or restart seed changes.
+  // Build the list of candidate methods for a lead — one entry (single mode) or
+  // the whole set (spliced). Shared by the initial build and by `extend`.
+  const buildLeadMethods = useCallback((): LeadMethod[] => {
+    const withCalls = mode === 'touch'
+    if (usingSplice) {
+      return spliceSet.methods.flatMap((name) => {
+        const def = METHODS.find((mm) => mm.name === name)
+        if (!def) return []
+        const m = buildMethod(def)
+        return [{ method: m, calls: withCalls ? safeStandardCalls(m) : [], trebleLeadOffset: offsetFor(name) }]
+      })
+    }
+    const m = buildMethod(method)
+    return [{ method: m, calls: withCalls ? safeStandardCalls(m) : [], trebleLeadOffset: offsetFor(method.name) }]
+  }, [usingSplice, spliceSet, method, mode])
+
+  // (Re)build the session whenever the method/set, mode, or restart seed changes.
   useEffect(() => {
     try {
-      setSession(makeSession(method, mode, trebleLeadOffset))
+      const leadMethods = buildLeadMethods()
+      if (leadMethods.length === 0) throw new Error('No methods available')
+      const rounds = Row.rounds(leadMethods[0].method.stage)
+      const b = generateLeads(leadMethods, rounds, INITIAL_LEADS, 0)
+      setSession({
+        rows: [rounds, ...b.rows],
+        callsAt: b.callsAt,
+        callMarks: b.callMarks,
+        methodAt: b.methodAt,
+        methodMarks: b.methodMarks,
+        leadMethodAt: b.leadMethodAt,
+      })
       setError(null)
     } catch (e) {
       setSession(EMPTY_SESSION)
@@ -71,29 +109,37 @@ export default function MethodTrainer({ method, methodName, onMethodChange }: Pr
     setIndex(0)
     setFeedback(null)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [method, mode, seed, trebleLeadOffset])
+  }, [buildLeadMethods, seed])
 
-  const { rows, callsAt, callMarks } = session
+  const { rows, callsAt, callMarks, methodAt, methodMarks, leadMethodAt } = session
 
   // Append more leads so the session never runs out.
   const extend = useCallback(() => {
     setSession((prev) => {
       if (prev.rows.length === 0) return prev
       try {
-        const m = buildMethod(method)
-        const calls = mode === 'touch' ? safeStandardCalls(m) : []
+        const leadMethods = buildLeadMethods()
+        if (leadMethods.length === 0) return prev
         const last = prev.rows[prev.rows.length - 1]
-        const b = generateLeads(m, last, EXTEND_LEADS, calls, trebleLeadOffset, prev.rows.length - 1)
-        const nextCallsAt = new Map(prev.callsAt)
-        b.callsAt.forEach((v, k) => nextCallsAt.set(k, v))
-        const nextCallMarks = new Map(prev.callMarks)
-        b.callMarks.forEach((v, k) => nextCallMarks.set(k, v))
-        return { rows: [...prev.rows, ...b.rows], callsAt: nextCallsAt, callMarks: nextCallMarks }
+        const b = generateLeads(leadMethods, last, EXTEND_LEADS, prev.rows.length - 1)
+        const mergeInto = <T,>(base: Map<number, T>, extra: Map<number, T>) => {
+          const next = new Map(base)
+          extra.forEach((v, k) => next.set(k, v))
+          return next
+        }
+        return {
+          rows: [...prev.rows, ...b.rows],
+          callsAt: mergeInto(prev.callsAt, b.callsAt),
+          callMarks: mergeInto(prev.callMarks, b.callMarks),
+          methodAt: mergeInto(prev.methodAt, b.methodAt),
+          methodMarks: mergeInto(prev.methodMarks, b.methodMarks),
+          leadMethodAt: mergeInto(prev.leadMethodAt, b.leadMethodAt),
+        }
       } catch {
         return prev
       }
     })
-  }, [method, mode, trebleLeadOffset])
+  }, [buildLeadMethods])
 
   // Keep the current row in view (centred above the sticky control bar).
   useEffect(() => {
@@ -125,6 +171,10 @@ export default function MethodTrainer({ method, methodName, onMethodChange }: Pr
       : null
 
   const currentCall = callsAt.get(index) ?? null
+  const currentMethodBanner = usingSplice ? (methodAt.get(index) ?? null) : null
+  const currentMethodName = usingSplice
+    ? (leadMethodAt.get(index) ?? methodAt.get(index) ?? '…')
+    : method.name
 
   const handleMove = (move: Move) => {
     if (requiredMove === null) return
@@ -155,11 +205,18 @@ export default function MethodTrainer({ method, methodName, onMethodChange }: Pr
   return (
     <div className="trainer">
       <div className="controls">
-        <MethodPicker methodName={methodName} onMethodChange={onMethodChange} />
+        <MethodPicker
+          methodName={methodName}
+          onMethodChange={onMethodChange}
+          spliceMode={spliceMode}
+          onSpliceModeChange={setSpliceMode}
+          spliceSetName={spliceSetName}
+          onSpliceSetChange={setSpliceSetName}
+        />
         <div className="field">
           <label htmlFor="tr-wb">Your bell</label>
           <select id="tr-wb" value={wb} onChange={(e) => setWorkingBell(Number(e.target.value))}>
-            {Array.from({ length: method.stage - 1 }, (_, i) => i + 1).map((b) => (
+            {Array.from({ length: effectiveStage - 1 }, (_, i) => i + 1).map((b) => (
               <option key={b} value={b}>{bellToChar(b)}</option>
             ))}
           </select>
@@ -172,8 +229,15 @@ export default function MethodTrainer({ method, methodName, onMethodChange }: Pr
       </div>
 
       <p className="meta">
-        You are ringing <strong>{bellToChar(wb)}</strong> · {method.name} ·{' '}
-        {mode === 'touch' ? 'touch (endless)' : 'plain course (endless)'} · row {index + 1}
+        You are ringing <strong>{bellToChar(wb)}</strong> ·{' '}
+        {usingSplice ? (
+          <>
+            {spliceSet.name} — <strong>{currentMethodName}</strong>
+          </>
+        ) : (
+          method.name
+        )}{' '}
+        · {mode === 'touch' ? 'touch (endless)' : 'plain course (endless)'} · row {index + 1}
       </p>
 
       <div className="trainer-rows-area">
@@ -182,6 +246,7 @@ export default function MethodTrainer({ method, methodName, onMethodChange }: Pr
             const absolute = from + i
             const isCurrent = absolute === index
             const mark = callMarks.get(absolute)
+            const mMark = usingSplice ? methodMarks.get(absolute) : undefined
             return (
               <div
                 key={absolute}
@@ -193,16 +258,23 @@ export default function MethodTrainer({ method, methodName, onMethodChange }: Pr
                     {bellToChar(bell)}
                   </span>
                 ))}
+                {mMark && <span className="call-mark call-mark--method">{mMark}</span>}
                 {mark && <span className={`call-mark call-mark--${mark.toLowerCase()}`}>{mark}</span>}
               </div>
             )
           })}
-          <div className="row placeholder">{'·'.repeat(method.stage)}</div>
+          <div className="row placeholder">{'·'.repeat(effectiveStage)}</div>
         </div>
       </div>
 
       <div className="trainer-controls">
         <div className="trainer-controls-inner">
+          {usingSplice && (
+            <div className={currentMethodBanner ? 'method-banner show' : 'method-banner'} aria-live="polite">
+              {currentMethodBanner ? `→ ${currentMethodBanner}` : ''}
+            </div>
+          )}
+
           <div className={currentCall ? 'call-banner show' : 'call-banner'} aria-live="assertive">
             {currentCall ? `🔔 ${currentCall}!` : ''}
           </div>

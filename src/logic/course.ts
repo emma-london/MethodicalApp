@@ -40,38 +40,82 @@ export interface LeadBatch {
    * where the call takes effect — used to mark it beside the rows list.
    */
   callMarks: Map<number, string>
+  /**
+   * Absolute row index -> the name of the method about to take over, spanning
+   * the lead-end transition. Used to flash the method banner (spliced only).
+   */
+  methodAt: Map<number, string>
+  /**
+   * Absolute lead-head row index -> the method of the lead that just finished.
+   * Rendered beside the rows, like a call mark (spliced only).
+   */
+  methodMarks: Map<number, string>
+  /**
+   * Absolute row index -> the method governing that row's lead, for every row.
+   * Lets the meta line show the live current method cheaply (spliced only).
+   */
+  leadMethodAt: Map<number, string>
   /** The last row produced (a lead head) — the start point for the next batch. */
   endRow: Row
 }
 
 /**
+ * A candidate method for a spliced session, bundled with its calls and treble
+ * offset. A single-element list reproduces plain single-method behaviour.
+ */
+export interface LeadMethod {
+  method: Method
+  /** [] for a plain course; standardCalls(method) for a called touch. */
+  calls: CallDefinition[]
+  /** Blows before the treble's first lead blow that calls are announced. */
+  trebleLeadOffset: number
+}
+
+/**
  * Generate `numLeads` leads starting immediately after `startRow` (which is not
- * itself included). When `calls` is non-empty each lead end is chosen at random
- * (weighted towards plain); with an empty `calls` array every lead is plain.
+ * itself included). Each lead independently picks one of `methods` at random
+ * (uniform); when that method has calls, its lead end is then chosen at random
+ * (weighted towards plain). With a single method and empty calls, every lead is
+ * a plain lead of that method — identical to the pre-spliced behaviour.
  *
  * This works from any lead head, so the trainer can extend a session forever by
  * calling it again from the previous `endRow`. Row indices in the returned maps
  * are absolute, offset by `absOffset` (the index of `startRow` in the full list).
  */
 export function generateLeads(
-  method: Method,
+  methods: LeadMethod[],
   startRow: Row,
   numLeads: number,
-  calls: CallDefinition[],
-  trebleLeadOffset: number,
   absOffset: number,
 ): LeadBatch {
-  const leadLength = method.leadLength
-  const changes = [...method] // the plain lead's changes
-  const callBySymbol = new Map(calls.map((c) => [c.symbol, c]))
-  const pool = ['.', '.', '.', ...calls.map((c) => c.symbol)]
+  const spliced = methods.length > 1
 
   const rows: Row[] = []
   const callsAt = new Map<number, string>()
   const callMarks = new Map<number, string>()
+  const methodAt = new Map<number, string>()
+  const methodMarks = new Map<number, string>()
+  const leadMethodAt = new Map<number, string>()
   let row = startRow
+  // Absolute index of the last row emitted so far (startRow sits at absOffset).
+  let abs = absOffset
 
   for (let l = 0; l < numLeads; l++) {
+    const lm = methods[Math.floor(Math.random() * methods.length)]
+    const { method, calls, trebleLeadOffset } = lm
+    const leadStartAbs = abs // this lead's rows run (leadStartAbs, leadHeadAbs]
+
+    // Announce the upcoming method across the lead-end transition (spliced only).
+    if (spliced) {
+      for (let r = Math.max(0, leadStartAbs - 1); r <= leadStartAbs + 1; r++) {
+        methodAt.set(r, method.name)
+      }
+    }
+
+    const changes = [...method] // the plain lead's changes
+    const callBySymbol = new Map(calls.map((c) => [c.symbol, c]))
+    const pool = ['.', '.', '.', ...calls.map((c) => c.symbol)]
+
     const symbol = calls.length ? pool[Math.floor(Math.random() * pool.length)] : '.'
     const call = symbol === '.' ? undefined : callBySymbol.get(symbol)
 
@@ -83,18 +127,22 @@ export function generateLeads(
     }
     for (const ch of base) {
       row = ch.apply(row)
+      abs++
       rows.push(row)
+      if (spliced) leadMethodAt.set(abs, method.name)
     }
 
+    const leadHeadAbs = abs // == leadStartAbs + method.leadLength
+    if (spliced) methodMarks.set(leadHeadAbs, method.name)
+
     if (call) {
-      const leadHeadAbs = absOffset + (l + 1) * leadLength
       callMarks.set(leadHeadAbs, call.name)
       const announce = leadHeadAbs - 1 - trebleLeadOffset
       for (let r = Math.max(0, announce); r <= leadHeadAbs; r++) callsAt.set(r, call.name)
     }
   }
 
-  return { rows, callsAt, callMarks, endRow: row }
+  return { rows, callsAt, callMarks, methodAt, methodMarks, leadMethodAt, endRow: row }
 }
 
 /** 0-based place (position, 0 = front/lead) of `bell` in each row. */

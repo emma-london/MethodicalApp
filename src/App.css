@@ -176,6 +176,8 @@ select, .btn {
 }
 .call-mark--bob { background: var(--down-color); }
 .call-mark--single { background: var(--accent); }
+/* Spliced: which method this lead was. Sits left of any call mark. */
+.call-mark--method { background: var(--accent2); right: auto; left: 4px; }
 /* Selected bells: coloured background, near-black font — high contrast for legibility.
    letter-spacing:normal keeps the row's inter-bell gap OUT of the pill (so it hugs the
    digit and isn't wide on the right); margin-right restores that gap outside the pill. */
@@ -227,6 +229,28 @@ select, .btn {
   animation: call-pulse 0.9s ease-in-out infinite alternate;
 }
 @keyframes call-pulse { from { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 60%, transparent); } to { box-shadow: 0 0 0 6px transparent; } }
+
+/* Spliced: the upcoming method, announced at the lead end. Same shape as the
+   call banner but blue, so a method change reads differently from a call. */
+.method-banner {
+  text-align: center;
+  font-weight: 800;
+  font-size: 1.05rem;
+  letter-spacing: 0.5px;
+  border-radius: 8px;
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transition: max-height 0.15s ease, opacity 0.15s ease, padding 0.15s ease;
+  color: var(--bg);
+  background: var(--accent2);
+}
+.method-banner.show {
+  max-height: 60px;
+  opacity: 1;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+}
 
 .move-buttons { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 8px; }
 .move-buttons button {
