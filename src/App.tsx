@@ -3,6 +3,7 @@ import './App.css'
 import { METHODS } from './data/methods'
 import MethodExplorer from './components/MethodExplorer'
 import MethodTrainer from './components/MethodTrainer'
+import InstallHint from './components/InstallHint'
 
 type Tab = 'explorer' | 'trainer'
 
@@ -37,6 +38,8 @@ export default function App() {
           Method Trainer
         </button>
       </nav>
+
+      <InstallHint />
 
       <main className="content">
         {tab === 'explorer' ? (

@@ -62,6 +62,37 @@
   margin: 0 auto;
 }
 
+/* Install hint (mobile browser only) */
+.install-hint {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  background: var(--surface2);
+  color: var(--text);
+  font-size: 0.82rem;
+}
+.install-hint__text { flex: 1; }
+.install-hint__install {
+  background: var(--accent2);
+  color: var(--bg);
+  border: none;
+  border-radius: 6px;
+  padding: 5px 12px;
+  font-weight: 700;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.install-hint__close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
 .app-footer {
   padding: 12px 20px;
   color: var(--text-muted);
