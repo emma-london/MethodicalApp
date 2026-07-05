@@ -13,8 +13,8 @@ export default defineConfig({
   },
   server: {
     // Dedicated port for Methodical (5173 is the Call Change App). strictPort
-    // means it fails loudly if 5180 is taken rather than silently moving elsewhere.
-    port: 5180,
+    // means it fails loudly if 5181 is taken rather than silently moving elsewhere.
+    port: 5181,
     strictPort: true,
   },
 })
