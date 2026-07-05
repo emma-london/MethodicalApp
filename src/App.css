@@ -145,13 +145,17 @@ select, .btn {
 }
 .call-mark--bob { background: var(--down-color); }
 .call-mark--single { background: var(--accent); }
-/* Selected bells: coloured background, near-black font — high contrast for legibility */
+/* Selected bells: coloured background, near-black font — high contrast for legibility.
+   letter-spacing:normal keeps the row's inter-bell gap OUT of the pill (so it hugs the
+   digit and isn't wide on the right); margin-right restores that gap outside the pill. */
 .trainer-rows .b-work,
 .trainer-rows .b-treble {
   color: #101018;
   font-weight: 800;
   border-radius: 5px;
-  padding: 0 0.14em;
+  letter-spacing: normal;
+  padding: 0 0.1em;
+  margin-right: 0.3em;
 }
 .trainer-rows .b-work { background: var(--workbell); }
 .trainer-rows .b-treble { background: var(--treble); }
