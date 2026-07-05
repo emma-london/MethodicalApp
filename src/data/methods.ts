@@ -1,7 +1,16 @@
-// A curated subset of common methods across stages, in ringing-lib-ts
-// place-notation form. Grows over time; the full CCCBR library can be
-// bundled later as generated app data (see README).
-import { Stage } from 'ringing-lib-ts'
+// The app's method list is sourced directly from the library's bundled
+// STANDARD_SET — the single source of truth. We deliberately keep no local copy
+// here so the list can never go stale: when the library's standard set grows
+// (and a new version is published), this app picks it up on the next dependency
+// bump.
+//
+// STANDARD_SET is a separate subpath export (not part of the root entry point):
+// ~45 real methods resolved at build time from the CCCBR snapshot. It is
+// distinct from the root's STANDARD_METHODS — a small hand-verified truth corpus
+// (~10 methods) whose root re-export is deprecated since library 1.2.0 (removal
+// in 2.0.0); STANDARD_SET is the intended source for application method lists.
+// See ADR-0015 / ADR-0019 / ADR-0020 in the library.
+import { STANDARD_SET } from 'ringing-lib-ts/data/standard-set'
 
 export interface MethodDef {
   name: string
@@ -10,37 +19,20 @@ export interface MethodDef {
   classification: string
 }
 
-export const METHODS: MethodDef[] = [
-  // Minimus (4)
-  { name: 'Plain Bob Minimus', stage: Stage.MINIMUS, notation: '&-14-14,12', classification: 'Bob' },
+// Present the library's set sorted by stage, then by name, for a tidy dropdown.
+export const METHODS: MethodDef[] = [...STANDARD_SET]
+  .map((m) => ({
+    name: m.name,
+    stage: m.stage,
+    notation: m.notation,
+    classification: m.classification,
+  }))
+  .sort((a, b) => a.stage - b.stage || a.name.localeCompare(b.name))
 
-  // Doubles (5)
-  { name: 'Plain Bob Doubles', stage: Stage.DOUBLES, notation: '&5.1.5.1.5,125', classification: 'Bob' },
-  { name: 'Grandsire Doubles', stage: Stage.DOUBLES, notation: '3.1.5.1.5.1.5.1.5.1', classification: 'Place' },
-  { name: 'Reverse Canterbury Pleasure Place Doubles', stage: Stage.DOUBLES, notation: '&5.1.5.36.5,125', classification: 'Place' },
-
-  // Minor (6)
-  { name: 'Plain Bob Minor', stage: Stage.MINOR, notation: '&-16-16-16,12', classification: 'Bob' },
-  { name: 'St Clement’s College Bob Minor', stage: Stage.MINOR, notation: '&-18-18-56,12', classification: 'Bob' },
-  { name: 'Cambridge Surprise Minor', stage: Stage.MINOR, notation: '&-36-14-12-36-14-56,12', classification: 'Surprise' },
-  { name: 'Kent Treble Bob Minor', stage: Stage.MINOR, notation: '&34-34.16-12-16-12-16,16', classification: 'Treble Bob' },
-
-  // Triples (7)
-  { name: 'Plain Bob Triples', stage: Stage.TRIPLES, notation: '&7.1.7.1.7.1.7,127', classification: 'Bob' },
-  { name: 'Grandsire Triples', stage: Stage.TRIPLES, notation: '3.1.7.1.7.1.7.1.7.1.7.1.7.1', classification: 'Place' },
-  { name: 'Stedman Triples', stage: Stage.TRIPLES, notation: '3.1.7.3.1.3,1', classification: 'Principle' },
-
-  // Major (8)
-  { name: 'Plain Bob Major', stage: Stage.MAJOR, notation: '&-18-18-18-18,12', classification: 'Bob' },
-  { name: 'Little Bob Major', stage: Stage.MAJOR, notation: '&-18-12-18,12', classification: 'Bob' },
-  { name: 'Double Norwich Court Bob Major', stage: Stage.MAJOR, notation: '&-14-58-16-78-14-58-16-78,18', classification: 'Bob' },
-  { name: 'Cambridge Surprise Major', stage: Stage.MAJOR, notation: '&-38-14-1258-36-14-58-16-78,12', classification: 'Surprise' },
-  { name: 'Yorkshire Surprise Major', stage: Stage.MAJOR, notation: '&-38-14-58-16-12-38-14-78,12', classification: 'Surprise' },
-
-  // Royal (10)
-  { name: 'Plain Bob Royal', stage: Stage.ROYAL, notation: '&-10-10-10-10-10,12', classification: 'Bob' },
-  { name: 'Cambridge Surprise Royal', stage: Stage.ROYAL, notation: '&-30-14-1250-36-1470-58-16-70-18-90,12', classification: 'Surprise' },
-]
+// Distinct stages present in the current method list, ascending.
+export const STAGES: number[] = [...new Set(METHODS.map((m) => m.stage))].sort(
+  (a, b) => a - b,
+)
 
 export const STAGE_NAMES: Record<number, string> = {
   4: 'Minimus', 5: 'Doubles', 6: 'Minor', 7: 'Triples',

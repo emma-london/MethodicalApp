@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { bellToChar } from 'ringing-lib-ts'
 import type { MethodDef } from '../data/methods'
 import { buildMethod, plainCourseRows } from '../logic/course'
@@ -13,11 +13,44 @@ interface Props {
 
 type View = 'numbers' | 'blueline'
 
+// Remember the reader's text-size and vertical-zoom choices across sessions.
+const ROW_HEIGHT_KEY = 'methodical.explorer.rowHeight'
+const TEXT_SIZE_KEY = 'methodical.explorer.textSize'
+
+function loadNumber(key: string, fallback: number): number {
+  try {
+    const raw = localStorage.getItem(key)
+    if (raw !== null) {
+      const n = Number(raw)
+      if (Number.isFinite(n)) return n
+    }
+  } catch {
+    // localStorage may be unavailable (e.g. private mode); fall back silently.
+  }
+  return fallback
+}
+
 export default function MethodExplorer({ method, methodName, onMethodChange }: Props) {
   const [view, setView] = useState<View>('numbers')
   const [workingBell, setWorkingBell] = useState(1) // 0-based; default the "2"
-  const [rowHeight, setRowHeight] = useState(6) // blue line vertical spacing (px); lower = squashed
-  const [textSize, setTextSize] = useState(18) // numbers view font size (px)
+  const [rowHeight, setRowHeight] = useState(() => loadNumber(ROW_HEIGHT_KEY, 6)) // blue line vertical spacing (px); lower = squashed
+  const [textSize, setTextSize] = useState(() => loadNumber(TEXT_SIZE_KEY, 18)) // numbers view font size (px)
+
+  // Persist the reader's preferences whenever they change.
+  useEffect(() => {
+    try {
+      localStorage.setItem(ROW_HEIGHT_KEY, String(rowHeight))
+    } catch {
+      // ignore write failures (private mode, quota, etc.)
+    }
+  }, [rowHeight])
+  useEffect(() => {
+    try {
+      localStorage.setItem(TEXT_SIZE_KEY, String(textSize))
+    } catch {
+      // ignore write failures (private mode, quota, etc.)
+    }
+  }, [textSize])
 
   const { rows, leadLength, error } = useMemo(() => {
     try {
