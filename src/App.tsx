@@ -9,7 +9,7 @@ type Tab = 'explorer' | 'trainer'
 
 export default function App() {
   const [tab, setTab] = useState<Tab>('explorer')
-  const [methodName, setMethodName] = useState<string>(METHODS[0].name)
+  const [methodName, setMethodName] = useState<string>('Grandsire Triples')
 
   const method = METHODS.find((m) => m.name === methodName) ?? METHODS[0]
 
