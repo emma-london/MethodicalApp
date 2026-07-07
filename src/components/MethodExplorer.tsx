@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { bellToChar } from 'ringing-lib-ts'
 import type { MethodDef } from '../data/methods'
-import { buildMethod, plainCourseRows } from '../logic/course'
+import { buildMethod, plainCourseRows, placeBellName } from '../logic/course'
 import MethodPicker from './MethodPicker'
 import Blueline from './Blueline'
 
@@ -128,6 +128,10 @@ export default function MethodExplorer({ method, methodName, onMethodChange }: P
           {rows.map((row, i) => {
             const isLeadHead = i > 0 && i % leadLength === 0
             const chars = row.toArray()
+            // Place bell for the lead beginning at this lead head (skip the
+            // final rounds row, which just repeats the start).
+            const showPlaceBell =
+              leadLength > 0 && i % leadLength === 0 && i !== rows.length - 1
             return (
               <div key={i} className={isLeadHead ? 'row lead-end' : 'row'}>
                 {chars.map((bell, pos) => (
@@ -138,12 +142,26 @@ export default function MethodExplorer({ method, methodName, onMethodChange }: P
                     {bellToChar(bell)}
                   </span>
                 ))}
+                {showPlaceBell && (
+                  <span
+                    className="pb-mark"
+                    title={`${placeBellName(chars.indexOf(wb) + 1)} place bell`}
+                  >
+                    {placeBellName(chars.indexOf(wb) + 1)}
+                  </span>
+                )}
               </div>
             )
           })}
         </div>
       ) : (
-        <Blueline rows={rows} stage={method.stage} workingBell={wb} rowHeight={rowHeight} />
+        <Blueline
+          rows={rows}
+          stage={method.stage}
+          workingBell={wb}
+          rowHeight={rowHeight}
+          leadLength={leadLength}
+        />
       )}
     </div>
   )

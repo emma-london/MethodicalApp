@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Row, standardCalls, bellToChar } from 'ringing-lib-ts'
 import type { Method, CallDefinition } from 'ringing-lib-ts'
 import type { MethodDef } from '../data/methods'
 import { METHODS } from '../data/methods'
 import { SPLICE_SETS } from '../data/spliceSets'
-import { buildMethod, generateLeads } from '../logic/course'
+import { buildMethod, generateLeads, placeBellName } from '../logic/course'
 import type { LeadMethod } from '../logic/course'
 import MethodPicker from './MethodPicker'
 
@@ -42,6 +42,17 @@ function safeStandardCalls(m: Method): CallDefinition[] {
   }
 }
 
+// Practice-touch policy (app-level, not library truth): which of a method's
+// standard calls the trainer is allowed to throw at random. Singles are still
+// real calls of the method — we just keep random Plain Bob Doubles practice to
+// bobs only, since stray singles give untypical little touches.
+function practiceCalls(methodName: string, calls: CallDefinition[]): CallDefinition[] {
+  if (/^plain bob doubles$/i.test(methodName.trim())) {
+    return calls.filter((c) => c.name.toLowerCase() !== 'single')
+  }
+  return calls
+}
+
 const EMPTY_SESSION: Session = {
   rows: [],
   callsAt: new Map(),
@@ -68,6 +79,17 @@ export default function MethodTrainer({ method, methodName, onMethodChange }: Pr
   const effectiveStage = usingSplice ? spliceSet.stage : method.stage
   const wb = Math.min(workingBell, effectiveStage - 1)
 
+  // Lead length for the single-method case, used to locate lead heads (where a
+  // place bell is shown). Spliced sessions locate lead heads via methodMarks.
+  const singleLeadLength = useMemo(() => {
+    if (usingSplice) return 0
+    try {
+      return buildMethod(method).leadLength
+    } catch {
+      return 0
+    }
+  }, [usingSplice, method])
+
   const [session, setSession] = useState<Session>(EMPTY_SESSION)
 
   // Build the list of candidate methods for a lead — one entry (single mode) or
@@ -79,11 +101,11 @@ export default function MethodTrainer({ method, methodName, onMethodChange }: Pr
         const def = METHODS.find((mm) => mm.name === name)
         if (!def) return []
         const m = buildMethod(def)
-        return [{ method: m, calls: withCalls ? safeStandardCalls(m) : [], trebleLeadOffset: offsetFor(name) }]
+        return [{ method: m, calls: withCalls ? practiceCalls(name, safeStandardCalls(m)) : [], trebleLeadOffset: offsetFor(name) }]
       })
     }
     const m = buildMethod(method)
-    return [{ method: m, calls: withCalls ? safeStandardCalls(m) : [], trebleLeadOffset: offsetFor(method.name) }]
+    return [{ method: m, calls: withCalls ? practiceCalls(method.name, safeStandardCalls(m)) : [], trebleLeadOffset: offsetFor(method.name) }]
   }, [usingSplice, spliceSet, method, mode])
 
   // (Re)build the session whenever the method/set, mode, or restart seed changes.
@@ -247,6 +269,15 @@ export default function MethodTrainer({ method, methodName, onMethodChange }: Pr
             const isCurrent = absolute === index
             const mark = callMarks.get(absolute)
             const mMark = usingSplice ? methodMarks.get(absolute) : undefined
+            // A lead head: row 0 (rounds) plus every method-mark row (spliced),
+            // or every `singleLeadLength` rows (single method). Show the place
+            // bell the ringer's own bell rings for the lead starting here.
+            const isLeadHead = usingSplice
+              ? absolute === 0 || methodMarks.has(absolute)
+              : singleLeadLength > 0 && absolute % singleLeadLength === 0
+            const pbMark = isLeadHead
+              ? placeBellName(row.toArray().indexOf(wb) + 1)
+              : undefined
             return (
               <div
                 key={absolute}
@@ -258,7 +289,16 @@ export default function MethodTrainer({ method, methodName, onMethodChange }: Pr
                     {bellToChar(bell)}
                   </span>
                 ))}
-                {mMark && <span className="call-mark call-mark--method">{mMark}</span>}
+                {(mMark || pbMark) && (
+                  <span className="lead-marks">
+                    {mMark && <span className="lead-pill lead-pill--method">{mMark}</span>}
+                    {pbMark && (
+                      <span className="lead-pill lead-pill--pb" title={`${pbMark} place bell`}>
+                        {pbMark}
+                      </span>
+                    )}
+                  </span>
+                )}
                 {mark && <span className={`call-mark call-mark--${mark.toLowerCase()}`}>{mark}</span>}
               </div>
             )

@@ -1,20 +1,23 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Row } from 'ringing-lib-ts'
 import { bellToChar } from 'ringing-lib-ts'
-import { bellPath } from '../logic/course'
+import { bellPath, placeBellName } from '../logic/course'
 
 interface Props {
   rows: Row[]
   stage: number
   workingBell: number // 0-based
   rowHeight?: number // vertical spacing per row (px); lower = more squashed
+  leadLength?: number // rows per lead; enables place-bell labels at lead heads
 }
 
 const PAD = 18
 const MIN_DX = 16
 const MAX_DX = 60
+// Extra room on the right so place-bell labels aren't clipped.
+const LABEL_W = 34
 
-export default function Blueline({ rows, stage, workingBell, rowHeight = 6 }: Props) {
+export default function Blueline({ rows, stage, workingBell, rowHeight = 6, leadLength = 0 }: Props) {
   const dy = rowHeight
   const wrapRef = useRef<HTMLDivElement>(null)
   const [availW, setAvailW] = useState(0)
@@ -36,16 +39,25 @@ export default function Blueline({ rows, stage, workingBell, rowHeight = 6 }: Pr
       ? Math.max(MIN_DX, Math.min(MAX_DX, (availW - PAD * 2 - 24) / Math.max(1, stage - 1)))
       : 26
 
-  const { treble, work, width, height } = useMemo(() => {
+  const { treble, work, width, height, placeBells } = useMemo(() => {
     const treble = bellPath(rows, 0)
     const work = bellPath(rows, workingBell)
+    // Place bell at each lead head (skip the final rounds row).
+    const placeBells: { i: number; place: number }[] = []
+    if (leadLength > 0) {
+      for (let i = 0; i < rows.length; i += leadLength) {
+        if (i === rows.length - 1) continue
+        placeBells.push({ i, place: work[i] + 1 })
+      }
+    }
     return {
       treble,
       work,
-      width: (stage - 1) * dx + PAD * 2,
+      placeBells,
+      width: (stage - 1) * dx + PAD * 2 + LABEL_W,
       height: (rows.length - 1) * dy + PAD * 2,
     }
-  }, [rows, stage, workingBell, dx, dy])
+  }, [rows, stage, workingBell, dx, dy, leadLength])
 
   const toPoints = (path: number[]) =>
     path.map((place, i) => `${place * dx + PAD},${i * dy + PAD}`).join(' ')
@@ -55,6 +67,7 @@ export default function Blueline({ rows, stage, workingBell, rowHeight = 6 }: Pr
       <div className="legend">
         <span><i className="swatch" style={{ background: 'var(--treble)' }} /> Treble (1)</span>
         <span><i className="swatch" style={{ background: 'var(--workbell)' }} /> Working bell ({bellToChar(workingBell)})</span>
+        {leadLength > 0 && <span className="legend-note">Labels = place bell at each lead end</span>}
       </div>
       <svg width={width} height={height} role="img" aria-label="Blue line">
         {/* faint place columns */}
@@ -88,6 +101,21 @@ export default function Blueline({ rows, stage, workingBell, rowHeight = 6 }: Pr
         {/* start markers */}
         <circle cx={treble[0] * dx + PAD} cy={PAD} r={4} fill="var(--treble)" />
         <circle cx={work[0] * dx + PAD} cy={PAD} r={4} fill="var(--workbell)" />
+        {/* place bells: mark and label the working bell at each lead head */}
+        {placeBells.map(({ i, place }) => (
+          <g key={i}>
+            <circle cx={work[i] * dx + PAD} cy={i * dy + PAD} r={3.5} fill="var(--workbell)" />
+            <text
+              x={work[i] * dx + PAD + 7}
+              y={i * dy + PAD + 3.5}
+              fontSize={11}
+              fontWeight={700}
+              fill="var(--workbell)"
+            >
+              {placeBellName(place)}
+            </text>
+          </g>
+        ))}
       </svg>
     </div>
   )

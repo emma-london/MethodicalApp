@@ -149,3 +149,36 @@ export function generateLeads(
 export function bellPath(rows: Row[], bell: number): number[] {
   return rows.map((r) => r.toArray().indexOf(bell))
 }
+
+/**
+ * Name of a place bell by its 1-based place: 1→"1sts", 2→"2nds", 3→"3rds",
+ * otherwise "Nths". The place bell a working bell rings for a lead is named by
+ * the place it occupies at that lead's head.
+ */
+export function placeBellName(place: number): string {
+  if (place === 1) return '1sts'
+  if (place === 2) return '2nds'
+  if (place === 3) return '3rds'
+  return `${place}ths`
+}
+
+/**
+ * The place bell `bell` (0-based) rings at each lead head of `rows`, keyed by
+ * absolute row index. A lead head sits every `leadLength` rows (row 0 = the
+ * course head). The value is the 1-based place the bell occupies there — i.e.
+ * the place bell it rings for the lead beginning at that row. The final row is
+ * the course coming round (a repeat of row 0) and is omitted.
+ */
+export function placeBellsAt(
+  rows: Row[],
+  bell: number,
+  leadLength: number,
+): Map<number, number> {
+  const out = new Map<number, number>()
+  if (leadLength <= 0) return out
+  for (let i = 0; i < rows.length; i += leadLength) {
+    if (i === rows.length - 1) continue // final rounds — same as row 0
+    out.set(i, rows[i].toArray().indexOf(bell) + 1)
+  }
+  return out
+}
