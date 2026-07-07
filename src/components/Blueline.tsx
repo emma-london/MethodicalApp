@@ -14,13 +14,17 @@ interface Props {
 const PAD = 18
 const MIN_DX = 16
 const MAX_DX = 60
-// Extra room on the right so place-bell labels aren't clipped.
-const LABEL_W = 34
+// Left gutter reserved for place-bell labels, so they sit clear of the line
+// (to the left of 1st place) rather than overlapping it.
+const LABEL_W = 40
 
 export default function Blueline({ rows, stage, workingBell, rowHeight = 6, leadLength = 0 }: Props) {
   const dy = rowHeight
   const wrapRef = useRef<HTMLDivElement>(null)
   const [availW, setAvailW] = useState(0)
+
+  // x origin of 1st place — the drawing is shifted right to leave the label gutter.
+  const OX = PAD + LABEL_W
 
   // Measure the container so the blue line spreads across the available width.
   useEffect(() => {
@@ -36,7 +40,7 @@ export default function Blueline({ rows, stage, workingBell, rowHeight = 6, lead
   // Column spacing: fill the width, but clamp so it never gets silly.
   const dx =
     availW > 0
-      ? Math.max(MIN_DX, Math.min(MAX_DX, (availW - PAD * 2 - 24) / Math.max(1, stage - 1)))
+      ? Math.max(MIN_DX, Math.min(MAX_DX, (availW - PAD * 2 - LABEL_W) / Math.max(1, stage - 1)))
       : 26
 
   const { treble, work, width, height, placeBells } = useMemo(() => {
@@ -57,10 +61,10 @@ export default function Blueline({ rows, stage, workingBell, rowHeight = 6, lead
       width: (stage - 1) * dx + PAD * 2 + LABEL_W,
       height: (rows.length - 1) * dy + PAD * 2,
     }
-  }, [rows, stage, workingBell, dx, dy, leadLength])
+  }, [rows, stage, workingBell, dx, dy, leadLength, OX])
 
   const toPoints = (path: number[]) =>
-    path.map((place, i) => `${place * dx + PAD},${i * dy + PAD}`).join(' ')
+    path.map((place, i) => `${place * dx + OX},${i * dy + PAD}`).join(' ')
 
   return (
     <div className="blueline-wrap" ref={wrapRef}>
@@ -74,9 +78,9 @@ export default function Blueline({ rows, stage, workingBell, rowHeight = 6, lead
         {Array.from({ length: stage }, (_, p) => (
           <line
             key={p}
-            x1={p * dx + PAD}
+            x1={p * dx + OX}
             y1={PAD}
-            x2={p * dx + PAD}
+            x2={p * dx + OX}
             y2={height - PAD}
             stroke="var(--surface2)"
             strokeWidth={1}
@@ -99,18 +103,21 @@ export default function Blueline({ rows, stage, workingBell, rowHeight = 6, lead
           strokeLinecap="round"
         />
         {/* start markers */}
-        <circle cx={treble[0] * dx + PAD} cy={PAD} r={4} fill="var(--treble)" />
-        <circle cx={work[0] * dx + PAD} cy={PAD} r={4} fill="var(--workbell)" />
-        {/* place bells: mark and label the working bell at each lead head */}
+        <circle cx={treble[0] * dx + OX} cy={PAD} r={4} fill="var(--treble)" />
+        <circle cx={work[0] * dx + OX} cy={PAD} r={4} fill="var(--workbell)" />
+        {/* place bells: a dot on the working line at each lead head, with the
+            label aligned in the left gutter (clear of the line). */}
         {placeBells.map(({ i, place }) => (
           <g key={i}>
-            <circle cx={work[i] * dx + PAD} cy={i * dy + PAD} r={3.5} fill="var(--workbell)" />
+            <circle cx={work[i] * dx + OX} cy={i * dy + PAD} r={3.5} fill="var(--workbell)" />
             <text
-              x={work[i] * dx + PAD + 7}
-              y={i * dy + PAD + 3.5}
+              x={OX - 8}
+              y={i * dy + PAD}
               fontSize={11}
               fontWeight={700}
               fill="var(--workbell)"
+              textAnchor="end"
+              dominantBaseline="middle"
             >
               {placeBellName(place)}
             </text>

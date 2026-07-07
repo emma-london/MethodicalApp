@@ -143,10 +143,10 @@ select, .btn {
    i.e. the place bell it rings for the next lead. */
 .rows-grid .pb-mark {
   position: absolute;
-  left: 100%;
+  right: 100%;
   top: 50%;
   transform: translateY(-50%);
-  margin-left: 10px;
+  margin-right: 10px;
   padding: 1px 6px;
   border-radius: 6px;
   background: var(--workbell);
