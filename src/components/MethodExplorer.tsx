@@ -4,6 +4,7 @@ import type { MethodDef } from '../data/methods'
 import { buildMethod, plainCourseRows, placeBellName } from '../logic/course'
 import MethodPicker from './MethodPicker'
 import Blueline from './Blueline'
+import { usePinchZoom } from '../hooks/usePinchZoom'
 
 interface Props {
   method: MethodDef
@@ -16,6 +17,8 @@ type View = 'numbers' | 'blueline'
 // Remember the reader's text-size and vertical-zoom choices across sessions.
 const ROW_HEIGHT_KEY = 'methodical.explorer.rowHeight'
 const TEXT_SIZE_KEY = 'methodical.explorer.textSize'
+// Once the reader has zoomed by gesture, we stop nagging them with the hint.
+const ZOOM_HINT_KEY = 'methodical.explorer.zoomHintSeen'
 
 function loadNumber(key: string, fallback: number): number {
   try {
@@ -35,6 +38,7 @@ export default function MethodExplorer({ method, methodName, onMethodChange }: P
   const [workingBell, setWorkingBell] = useState(1) // 0-based; default the "2"
   const [rowHeight, setRowHeight] = useState(() => loadNumber(ROW_HEIGHT_KEY, 6)) // blue line vertical spacing (px); lower = squashed
   const [textSize, setTextSize] = useState(() => loadNumber(TEXT_SIZE_KEY, 18)) // numbers view font size (px)
+  const [hintOn, setHintOn] = useState(() => loadNumber(ZOOM_HINT_KEY, 0) === 0) // show until first gesture
 
   // Persist the reader's preferences whenever they change.
   useEffect(() => {
@@ -60,6 +64,32 @@ export default function MethodExplorer({ method, methodName, onMethodChange }: P
       return { rows: [], leadLength: 0, error: (e as Error).message }
     }
   }, [method])
+
+  // Pinch-to-zoom shares state with the slider: it drives the same rowHeight /
+  // textSize value, but multiplicatively on the raw float, so it stays smooth
+  // (we never round, we just clamp). The slider snaps; pinch does not.
+  const isBlueline = view === 'blueline'
+  // Fade the hint out the first time the reader actually zooms by gesture,
+  // and remember that across sessions.
+  const dismissHint = () => {
+    if (!hintOn) return
+    setHintOn(false)
+    try {
+      localStorage.setItem(ZOOM_HINT_KEY, '1')
+    } catch {
+      // ignore write failures (private mode, quota, etc.)
+    }
+  }
+  const zoomRef = usePinchZoom<HTMLDivElement>({
+    min: isBlueline ? 4 : 14,
+    max: isBlueline ? 16 : 40,
+    getValue: () => (isBlueline ? rowHeight : textSize),
+    setValue: (v) => {
+      if (isBlueline) setRowHeight(v)
+      else setTextSize(v)
+      dismissHint()
+    },
+  })
 
   // Keep the selected working bell in range when the stage changes.
   const wb = Math.min(workingBell, method.stage - 1)
@@ -95,7 +125,7 @@ export default function MethodExplorer({ method, methodName, onMethodChange }: P
               type="range"
               min={4}
               max={16}
-              step={1}
+              step={0.1}
               value={rowHeight}
               onChange={(e) => setRowHeight(Number(e.target.value))}
               aria-label="Blue line vertical zoom"
@@ -110,7 +140,7 @@ export default function MethodExplorer({ method, methodName, onMethodChange }: P
               type="range"
               min={14}
               max={40}
-              step={2}
+              step={0.1}
               value={textSize}
               onChange={(e) => setTextSize(Number(e.target.value))}
               aria-label="Numbers text size"
@@ -123,6 +153,10 @@ export default function MethodExplorer({ method, methodName, onMethodChange }: P
         <strong>{method.name}</strong> · {method.classification} · {method.notation} · plain course of {rows.length - 1} rows
       </p>
 
+      <p className={`zoom-hint${hintOn ? '' : ' is-hidden'}`} aria-hidden={!hintOn}>
+        Pinch to zoom — or Ctrl + scroll on a trackpad
+      </p>
+      <div className="zoom-surface" ref={zoomRef}>
       {view === 'numbers' ? (
         <div className="rows-grid" style={{ fontSize: `${textSize}px` }}>
           {rows.map((row, i) => {
@@ -163,6 +197,7 @@ export default function MethodExplorer({ method, methodName, onMethodChange }: P
           leadLength={leadLength}
         />
       )}
+      </div>
     </div>
   )
 }
