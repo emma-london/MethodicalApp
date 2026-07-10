@@ -12,6 +12,8 @@ interface Props {
   /** id for the trigger button, so a <label htmlFor> can point at it. */
   id?: string
   ariaLabel?: string
+  /** Give the menu a taller cap (e.g. the Stage list, which should fit fully). */
+  tallMenu?: boolean
 }
 
 /**
@@ -23,7 +25,7 @@ interface Props {
  * touch, and keyboard (arrows / Home / End / Enter / Escape), closes on outside
  * click, and exposes listbox/option roles for assistive tech.
  */
-export default function Dropdown({ value, options, onChange, id, ariaLabel }: Props) {
+export default function Dropdown({ value, options, onChange, id, ariaLabel, tallMenu }: Props) {
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(0)
   const rootRef = useRef<HTMLDivElement | null>(null)
@@ -115,7 +117,13 @@ export default function Dropdown({ value, options, onChange, id, ariaLabel }: Pr
         <span className="dropdown-caret" aria-hidden="true">▾</span>
       </button>
       {open && (
-        <ul className="dropdown-menu" role="listbox" id={listId} ref={listRef} tabIndex={-1}>
+        <ul
+          className={'dropdown-menu' + (tallMenu ? ' dropdown-menu--tall' : '')}
+          role="listbox"
+          id={listId}
+          ref={listRef}
+          tabIndex={-1}
+        >
           {options.map((o, i) => (
             <li
               key={o.value}

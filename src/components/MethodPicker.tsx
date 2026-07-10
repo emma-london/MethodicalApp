@@ -34,6 +34,18 @@ export default function MethodPicker({
   const visible =
     stageFilter === 'all' ? METHODS : METHODS.filter((m) => m.stage === stageFilter)
 
+  // When a single stage is chosen, the stage word (e.g. "Triples") is redundant
+  // with the Stage dropdown, so drop it: "Grandsire Triples" -> "Grandsire".
+  // In "All stages" we keep it, since it's the only thing distinguishing e.g.
+  // Cambridge Surprise Minor / Major / Royal. The value stays the full name.
+  const methodLabel = (m: (typeof METHODS)[number]) => {
+    if (stageFilter === 'all') return m.name
+    const word = STAGE_NAMES[m.stage]
+    return word && m.name.endsWith(` ${word}`)
+      ? m.name.slice(0, -(word.length + 1))
+      : m.name
+  }
+
   const handleStageChange = (value: string) => {
     const next: StageFilter = value === 'all' ? 'all' : Number(value)
     setStageFilter(next)
@@ -88,6 +100,7 @@ export default function MethodPicker({
               id="stage-select"
               value={String(stageFilter)}
               onChange={handleStageChange}
+              tallMenu
               options={[
                 { value: 'all', label: 'All stages' },
                 ...STAGES.map((s) => ({ value: String(s), label: String(STAGE_NAMES[s] ?? s) })),
@@ -100,7 +113,7 @@ export default function MethodPicker({
               id="method-select"
               value={methodName}
               onChange={onMethodChange}
-              options={visible.map((m) => ({ value: m.name, label: m.name }))}
+              options={visible.map((m) => ({ value: m.name, label: methodLabel(m) }))}
             />
           </div>
         </>

@@ -136,7 +136,7 @@ export default function MethodExplorer({ method, methodName, onMethodChange }: P
             />
           </div>
         ) : (
-          <div className="field">
+          <div className="field field--wide-only">
             <label htmlFor="textsize">Text size</label>
             <input
               id="textsize"

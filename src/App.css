@@ -165,7 +165,20 @@ select, .btn {
   border: 1px solid var(--text-muted);
   border-radius: 6px;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+  /* A clearly visible scrollbar (default overlay/thin ones are hard to see). */
+  scrollbar-width: auto;
+  scrollbar-color: var(--text-muted) transparent;
 }
+.dropdown-menu::-webkit-scrollbar { width: 12px; }
+.dropdown-menu::-webkit-scrollbar-track { background: transparent; }
+.dropdown-menu::-webkit-scrollbar-thumb {
+  background: var(--text-muted);
+  border-radius: 6px;
+  border: 3px solid var(--surface2);
+}
+/* Stage list: tall enough to show every current stage without scrolling
+   (scrolls only once the set grows past ~13 stages). */
+.dropdown-menu--tall { max-height: 460px; }
 .dropdown-option {
   padding: 7px 10px;
   border-radius: 4px;
@@ -176,6 +189,12 @@ select, .btn {
 }
 .dropdown-option.is-active { background: var(--surface); }
 .dropdown-option.is-selected { color: var(--accent2); font-weight: 600; }
+
+/* Controls that are only useful on larger screens. On mobile, pinch-to-zoom
+   replaces the text-size slider, so hide it there to save space. */
+@media (max-width: 640px) {
+  .field--wide-only { display: none; }
+}
 
 /* Numbers grid — packed tight and centred; text size is user-controllable */
 .rows-grid {
