@@ -83,8 +83,8 @@ export default function MethodExplorer({ method, methodName, onMethodChange }: P
   // Bound page-wide (see usePinchZoom), so a pinch anywhere on the screen
   // drives the zoom — not just over the content box.
   usePinchZoom({
-    min: isBlueline ? 4 : 14,
-    max: isBlueline ? 16 : 40,
+    min: isBlueline ? 2 : 8,
+    max: isBlueline ? 32 : 72,
     getValue: () => (isBlueline ? rowHeight : textSize),
     setValue: (v) => {
       if (isBlueline) setRowHeight(v)
@@ -125,8 +125,8 @@ export default function MethodExplorer({ method, methodName, onMethodChange }: P
               id="zoom"
               className="zoom-range"
               type="range"
-              min={4}
-              max={16}
+              min={2}
+              max={32}
               step={0.1}
               value={rowHeight}
               onChange={(e) => setRowHeight(Number(e.target.value))}
@@ -140,8 +140,8 @@ export default function MethodExplorer({ method, methodName, onMethodChange }: P
               id="textsize"
               className="zoom-range"
               type="range"
-              min={14}
-              max={40}
+              min={8}
+              max={72}
               step={0.1}
               value={textSize}
               onChange={(e) => setTextSize(Number(e.target.value))}
