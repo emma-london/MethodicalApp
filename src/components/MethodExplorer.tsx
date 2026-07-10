@@ -103,8 +103,8 @@ export default function MethodExplorer({ method, methodName, onMethodChange }: P
     <div>
       <div className="controls">
         <MethodPicker methodName={methodName} onMethodChange={onMethodChange} />
-        <div className="field">
-          <label htmlFor="wb-select">Working bell</label>
+        <div className="field field--narrow">
+          <label htmlFor="wb-select">Bell</label>
           <Dropdown
             id="wb-select"
             value={String(wb)}
@@ -121,7 +121,7 @@ export default function MethodExplorer({ method, methodName, onMethodChange }: P
           <button className={view === 'blueline' ? 'active' : ''} onClick={() => setView('blueline')}>Blue line</button>
         </div>
         {view === 'blueline' ? (
-          <div className="field">
+          <div className="field field--wide-only">
             <label htmlFor="zoom">Vertical zoom</label>
             <input
               id="zoom"

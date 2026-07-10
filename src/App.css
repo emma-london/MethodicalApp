@@ -190,10 +190,15 @@ select, .btn {
 .dropdown-option.is-active { background: var(--surface); }
 .dropdown-option.is-selected { color: var(--accent2); font-weight: 600; }
 
+/* A compact field for single-character choices (e.g. the Bell selector). */
+.field--narrow .dropdown-btn { width: auto; min-width: 52px; }
+
 /* Controls that are only useful on larger screens. On mobile, pinch-to-zoom
-   replaces the text-size slider, so hide it there to save space. */
+   replaces the zoom/text-size sliders, so hide them there to save space. */
 @media (max-width: 640px) {
   .field--wide-only { display: none; }
+  .controls { gap: 8px 10px; margin-bottom: 10px; }
+  .app-header { padding-bottom: 8px; }
 }
 
 /* Numbers grid — packed tight and centred; text size is user-controllable */
