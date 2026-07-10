@@ -40,18 +40,19 @@ interface GestureEventLike extends Event {
  *
  *  3. wheel with ctrlKey — a trackpad pinch on desktop arrives this way.
  *
- * Listeners are non-passive so preventDefault can take effect.
+ * Listeners are bound to `document` so the pinch works anywhere on the page,
+ * not just over the content box. They are non-passive so preventDefault can
+ * take effect. Single-finger scrolling is untouched (we only cancel two-finger
+ * moves), so the page still scrolls normally.
  */
-export function usePinchZoom<T extends HTMLElement>(config: PinchZoomConfig) {
-  const ref = useRef<T | null>(null)
+export function usePinchZoom(config: PinchZoomConfig) {
   // Keep the latest config in a ref so the effect binds listeners once (on
   // mount) yet always reads current values/callbacks.
   const cfg = useRef(config)
   cfg.current = config
 
   useEffect(() => {
-    const el = ref.current
-    if (!el) return
+    const el: Document = document
 
     const clamp = (v: number) =>
       Math.min(cfg.current.max, Math.max(cfg.current.min, v))
@@ -136,6 +137,4 @@ export function usePinchZoom<T extends HTMLElement>(config: PinchZoomConfig) {
       el.removeEventListener('wheel', onWheel)
     }
   }, [])
-
-  return ref
 }

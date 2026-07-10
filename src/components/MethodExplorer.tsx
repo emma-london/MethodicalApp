@@ -80,7 +80,9 @@ export default function MethodExplorer({ method, methodName, onMethodChange }: P
       // ignore write failures (private mode, quota, etc.)
     }
   }
-  const zoomRef = usePinchZoom<HTMLDivElement>({
+  // Bound page-wide (see usePinchZoom), so a pinch anywhere on the screen
+  // drives the zoom — not just over the content box.
+  usePinchZoom({
     min: isBlueline ? 4 : 14,
     max: isBlueline ? 16 : 40,
     getValue: () => (isBlueline ? rowHeight : textSize),
@@ -156,7 +158,7 @@ export default function MethodExplorer({ method, methodName, onMethodChange }: P
       <p className={`zoom-hint${hintOn ? '' : ' is-hidden'}`} aria-hidden={!hintOn}>
         Pinch to zoom — or Ctrl + scroll on a trackpad
       </p>
-      <div className="zoom-surface" ref={zoomRef}>
+      <div className="zoom-surface">
       {view === 'numbers' ? (
         <div className="rows-grid" style={{ fontSize: `${textSize}px` }}>
           {rows.map((row, i) => {

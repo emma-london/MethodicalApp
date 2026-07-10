@@ -158,9 +158,13 @@ select, .btn {
   white-space: nowrap;
 }
 
-/* Pinch-to-zoom surface: allow one-finger scroll/pan, but suppress the browser's
-   own pinch-zoom so usePinchZoom can handle two-finger + ctrl-wheel gestures. */
-.zoom-surface { touch-action: pan-x pan-y; }
+/* Pinch-to-zoom is bound page-wide (usePinchZoom → document), so suppress the
+   browser's own pinch-zoom across the whole page. pan-x pan-y still allows
+   one-finger scrolling; only pinch is handed to us. */
+html,
+body {
+  touch-action: pan-x pan-y;
+}
 .zoom-hint {
   font-size: 0.72rem;
   color: var(--text-muted);
