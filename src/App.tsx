@@ -50,7 +50,7 @@ export default function App() {
       </main>
 
       <footer className="app-footer">
-        Built on <code>ringing-lib-ts</code>
+        Built on <code>ringing-lib-ts</code> · © Emma Bruce 2026
       </footer>
     </div>
   )

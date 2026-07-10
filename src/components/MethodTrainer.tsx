@@ -7,6 +7,7 @@ import { SPLICE_SETS } from '../data/spliceSets'
 import { buildMethod, generateLeads, placeBellName } from '../logic/course'
 import type { LeadMethod } from '../logic/course'
 import MethodPicker from './MethodPicker'
+import Dropdown from './Dropdown'
 
 interface Props {
   method: MethodDef
@@ -237,11 +238,16 @@ export default function MethodTrainer({ method, methodName, onMethodChange }: Pr
         />
         <div className="field">
           <label htmlFor="tr-wb">Your bell</label>
-          <select id="tr-wb" value={wb} onChange={(e) => setWorkingBell(Number(e.target.value))}>
-            {Array.from({ length: effectiveStage - 1 }, (_, i) => i + 1).map((b) => (
-              <option key={b} value={b}>{bellToChar(b)}</option>
-            ))}
-          </select>
+          <Dropdown
+            id="tr-wb"
+            value={String(wb)}
+            onChange={(v) => setWorkingBell(Number(v))}
+            ariaLabel="Your bell"
+            options={Array.from({ length: effectiveStage - 1 }, (_, i) => i + 1).map((b) => ({
+              value: String(b),
+              label: bellToChar(b),
+            }))}
+          />
         </div>
         <div className="seg" role="tablist" aria-label="Mode">
           <button className={mode === 'plain' ? 'active' : ''} onClick={() => setMode('plain')}>Plain course</button>

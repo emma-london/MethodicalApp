@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { METHODS, STAGES, STAGE_NAMES } from '../data/methods'
 import { SPLICE_SETS } from '../data/spliceSets'
+import Dropdown from './Dropdown'
 
 interface Props {
   methodName: string
@@ -72,42 +73,35 @@ export default function MethodPicker({
       {splicedEnabled && spliceMode ? (
         <div className="field">
           <label htmlFor="splice-select">Spliced set</label>
-          <select
+          <Dropdown
             id="splice-select"
             value={spliceSetName ?? SPLICE_SETS[0].name}
-            onChange={(e) => onSpliceSetChange?.(e.target.value)}
-          >
-            {SPLICE_SETS.map((s) => (
-              <option key={s.name} value={s.name}>{s.name}</option>
-            ))}
-          </select>
+            onChange={(v) => onSpliceSetChange?.(v)}
+            options={SPLICE_SETS.map((s) => ({ value: s.name, label: s.name }))}
+          />
         </div>
       ) : (
         <>
           <div className="field">
             <label htmlFor="stage-select">Stage</label>
-            <select
+            <Dropdown
               id="stage-select"
-              value={stageFilter}
-              onChange={(e) => handleStageChange(e.target.value)}
-            >
-              <option value="all">All stages</option>
-              {STAGES.map((s) => (
-                <option key={s} value={s}>{STAGE_NAMES[s] ?? s}</option>
-              ))}
-            </select>
+              value={String(stageFilter)}
+              onChange={handleStageChange}
+              options={[
+                { value: 'all', label: 'All stages' },
+                ...STAGES.map((s) => ({ value: String(s), label: String(STAGE_NAMES[s] ?? s) })),
+              ]}
+            />
           </div>
           <div className="field">
             <label htmlFor="method-select">Method</label>
-            <select
+            <Dropdown
               id="method-select"
               value={methodName}
-              onChange={(e) => onMethodChange(e.target.value)}
-            >
-              {visible.map((m) => (
-                <option key={m.name} value={m.name}>{m.name}</option>
-              ))}
-            </select>
+              onChange={onMethodChange}
+              options={visible.map((m) => ({ value: m.name, label: m.name }))}
+            />
           </div>
         </>
       )}

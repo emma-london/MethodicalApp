@@ -4,6 +4,7 @@ import type { MethodDef } from '../data/methods'
 import { buildMethod, plainCourseRows, placeBellName } from '../logic/course'
 import MethodPicker from './MethodPicker'
 import Blueline from './Blueline'
+import Dropdown from './Dropdown'
 import { usePinchZoom } from '../hooks/usePinchZoom'
 
 interface Props {
@@ -104,15 +105,16 @@ export default function MethodExplorer({ method, methodName, onMethodChange }: P
         <MethodPicker methodName={methodName} onMethodChange={onMethodChange} />
         <div className="field">
           <label htmlFor="wb-select">Working bell</label>
-          <select
+          <Dropdown
             id="wb-select"
-            value={wb}
-            onChange={(e) => setWorkingBell(Number(e.target.value))}
-          >
-            {Array.from({ length: method.stage - 1 }, (_, i) => i + 1).map((b) => (
-              <option key={b} value={b}>{bellToChar(b)}</option>
-            ))}
-          </select>
+            value={String(wb)}
+            onChange={(v) => setWorkingBell(Number(v))}
+            ariaLabel="Working bell"
+            options={Array.from({ length: method.stage - 1 }, (_, i) => i + 1).map((b) => ({
+              value: String(b),
+              label: bellToChar(b),
+            }))}
+          />
         </div>
         <div className="seg" role="tablist" aria-label="View">
           <button className={view === 'numbers' ? 'active' : ''} onClick={() => setView('numbers')}>Numbers</button>
