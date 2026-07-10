@@ -1,10 +1,5 @@
-import { useEffect, useState } from 'react'
-
-// Android fires this before showing its install prompt; not in the standard lib types.
-interface BeforeInstallPromptEvent extends Event {
-  prompt: () => Promise<void>
-  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
-}
+import { useState } from 'react'
+import { useInstallPrompt } from '../hooks/useInstallPrompt'
 
 const DISMISS_KEY = 'methodical-install-hint-dismissed'
 
@@ -23,24 +18,7 @@ function readDismissed(): boolean {
  */
 export default function InstallHint() {
   const [dismissed, setDismissed] = useState(readDismissed)
-  const [prompt, setPrompt] = useState<BeforeInstallPromptEvent | null>(null)
-
-  useEffect(() => {
-    const onBeforeInstall = (e: Event) => {
-      e.preventDefault() // keep the event so we can trigger it from our own button
-      setPrompt(e as BeforeInstallPromptEvent)
-    }
-    window.addEventListener('beforeinstallprompt', onBeforeInstall)
-    return () => window.removeEventListener('beforeinstallprompt', onBeforeInstall)
-  }, [])
-
-  const ua = typeof navigator !== 'undefined' ? navigator.userAgent : ''
-  const isIOS = /iPhone|iPad|iPod/i.test(ua)
-  const isMobile = isIOS || /Android/i.test(ua)
-  const isStandalone =
-    typeof window !== 'undefined' &&
-    (window.matchMedia('(display-mode: standalone)').matches ||
-      (window.navigator as unknown as { standalone?: boolean }).standalone === true)
+  const { isIOS, isMobile, isStandalone, canPrompt, triggerInstall } = useInstallPrompt()
 
   if (dismissed || isStandalone || !isMobile) return null
 
@@ -54,9 +32,7 @@ export default function InstallHint() {
   }
 
   const install = async () => {
-    if (!prompt) return
-    await prompt.prompt()
-    await prompt.userChoice
+    await triggerInstall()
     dismiss()
   }
 
@@ -67,7 +43,7 @@ export default function InstallHint() {
           ? 'For full screen: tap Share, then “Add to Home Screen”.'
           : 'Add Methodical to your home screen for a full-screen app.'}
       </span>
-      {prompt && (
+      {canPrompt && (
         <button className="install-hint__install" onClick={install}>
           Install
         </button>

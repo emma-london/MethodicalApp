@@ -4,6 +4,7 @@ import { METHODS } from './data/methods'
 import MethodExplorer from './components/MethodExplorer'
 import MethodTrainer from './components/MethodTrainer'
 import InstallHint from './components/InstallHint'
+import InstallButton from './components/InstallButton'
 
 type Tab = 'explorer' | 'trainer'
 
@@ -16,8 +17,11 @@ export default function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1>Methodical</h1>
-        <p className="tagline">Look up &amp; learn change ringing methods</p>
+        <div className="app-header__titles">
+          <h1>Methodical</h1>
+          <p className="tagline">Look up &amp; learn change ringing methods</p>
+        </div>
+        <InstallButton />
       </header>
 
       <nav className="tabs" role="tablist">

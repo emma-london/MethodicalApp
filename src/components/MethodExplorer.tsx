@@ -117,8 +117,8 @@ export default function MethodExplorer({ method, methodName, onMethodChange }: P
           />
         </div>
         <div className="seg" role="tablist" aria-label="View">
-          <button className={view === 'numbers' ? 'active' : ''} onClick={() => setView('numbers')}>Numbers</button>
-          <button className={view === 'blueline' ? 'active' : ''} onClick={() => setView('blueline')}>Blue line</button>
+          <button className={view === 'numbers' ? 'active' : ''} onClick={() => setView('numbers')}>No.s</button>
+          <button className={view === 'blueline' ? 'active' : ''} onClick={() => setView('blueline')}>Line</button>
         </div>
         {view === 'blueline' ? (
           <div className="field field--wide-only">
@@ -152,10 +152,6 @@ export default function MethodExplorer({ method, methodName, onMethodChange }: P
           </div>
         )}
       </div>
-
-      <p className="meta">
-        <strong>{method.name}</strong> · {method.classification} · {method.notation} · plain course of {rows.length - 1} rows
-      </p>
 
       <p className={`zoom-hint${hintOn ? '' : ' is-hidden'}`} aria-hidden={!hintOn}>
         Pinch to zoom — or Ctrl + scroll on a trackpad
@@ -202,6 +198,10 @@ export default function MethodExplorer({ method, methodName, onMethodChange }: P
         />
       )}
       </div>
+
+      <p className="meta meta--bottom">
+        <strong>{method.name}</strong> · {method.classification} · {method.notation} · plain course of {rows.length - 1} rows
+      </p>
     </div>
   )
 }
