@@ -13,26 +13,39 @@ interface PinchZoomConfig {
   wheelSensitivity?: number
 }
 
+// WebKit's non-standard gesture events (iOS Safari) aren't in lib.dom.
+interface GestureEventLike extends Event {
+  scale: number
+}
+
 /**
  * Smooth pinch-to-zoom for a single element.
  *
  * Scaling is multiplicative on an internal float, so it never feels "steppy":
- * a two-finger pinch that doubles the finger distance doubles the value, and
- * the caller rounds only at render time (if at all).
+ * pinching the finger distance to 2x doubles the value, and the caller rounds
+ * only at render time (if at all).
  *
- * Two input paths are handled:
- *  - Touch: two active pointers; value scales by (currentDistance / startDistance).
- *  - Trackpad / ctrl+wheel: browsers report a pinch as a `wheel` event with
- *    `ctrlKey === true`; we map deltaY exponentially so zoom feels linear.
+ * Three input paths, chosen for reliability rather than elegance:
  *
- * The target element should set `touch-action: pan-x pan-y` (see .zoom-surface)
- * so one-finger scrolling still works while the browser's own pinch-zoom is
- * suppressed and handed to us.
+ *  1. Touch events (touchstart/move/end) — the cross-browser path for Android.
+ *     We call preventDefault() on a two-finger touchmove; this is what actually
+ *     stops the browser from page-zooming. CSS `touch-action` alone is NOT
+ *     enough on some engines (notably Samsung Internet), which ignore it for
+ *     pinch and zoom the whole page — the manual preventDefault is the fix.
+ *
+ *  2. WebKit gesture events (gesturestart/change/end) — iOS Safari fires these
+ *     alongside touch events and gives a direct `scale`. We prefer them there
+ *     (guarded by `gestureActive`) so the two paths don't double-apply, and we
+ *     preventDefault to stop Safari's page zoom.
+ *
+ *  3. wheel with ctrlKey — a trackpad pinch on desktop arrives this way.
+ *
+ * Listeners are non-passive so preventDefault can take effect.
  */
 export function usePinchZoom<T extends HTMLElement>(config: PinchZoomConfig) {
   const ref = useRef<T | null>(null)
-  // Keep the latest config in a ref so the effect can bind listeners once
-  // (on mount) yet always read current values/callbacks.
+  // Keep the latest config in a ref so the effect binds listeners once (on
+  // mount) yet always reads current values/callbacks.
   const cfg = useRef(config)
   cfg.current = config
 
@@ -43,40 +56,55 @@ export function usePinchZoom<T extends HTMLElement>(config: PinchZoomConfig) {
     const clamp = (v: number) =>
       Math.min(cfg.current.max, Math.max(cfg.current.min, v))
 
-    // --- Touch pinch (two pointers) ---
-    const pointers = new Map<number, { x: number; y: number }>()
-    let startDist = 0
-    let startValue = 0
+    // iOS Safari uses gesture events; when active we ignore the touch path so
+    // the same pinch isn't counted twice.
+    let gestureActive = false
 
-    const spread = () => {
-      const pts = [...pointers.values()]
-      if (pts.length < 2) return 0
-      const [a, b] = pts
-      return Math.hypot(a.x - b.x, a.y - b.y)
+    // --- Touch pinch (Android + generic) ---
+    let touchStartDist = 0
+    let touchStartValue = 0
+
+    const touchSpread = (touches: TouchList) => {
+      const a = touches[0]
+      const b = touches[1]
+      return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY)
     }
 
-    const onPointerDown = (e: PointerEvent) => {
-      if (e.pointerType === 'mouse') return
-      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
-      if (pointers.size === 2) {
-        startDist = spread()
-        startValue = cfg.current.getValue()
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length === 2) {
+        touchStartDist = touchSpread(e.touches)
+        touchStartValue = cfg.current.getValue()
       }
     }
 
-    const onPointerMove = (e: PointerEvent) => {
-      if (!pointers.has(e.pointerId)) return
-      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
-      if (pointers.size === 2 && startDist > 0) {
-        e.preventDefault() // stop the page from scrolling/zooming
-        const scale = spread() / startDist
-        cfg.current.setValue(clamp(startValue * scale))
+    const onTouchMove = (e: TouchEvent) => {
+      if (gestureActive) return
+      if (e.touches.length === 2 && touchStartDist > 0) {
+        e.preventDefault() // <-- stops Samsung/Chrome page zoom
+        const scale = touchSpread(e.touches) / touchStartDist
+        cfg.current.setValue(clamp(touchStartValue * scale))
       }
     }
 
-    const onPointerUp = (e: PointerEvent) => {
-      pointers.delete(e.pointerId)
-      if (pointers.size < 2) startDist = 0
+    const onTouchEnd = (e: TouchEvent) => {
+      if (e.touches.length < 2) touchStartDist = 0
+    }
+
+    // --- iOS Safari gesture events ---
+    let gestureStartValue = 0
+
+    const onGestureStart = (e: GestureEventLike) => {
+      e.preventDefault()
+      gestureActive = true
+      gestureStartValue = cfg.current.getValue()
+    }
+    const onGestureChange = (e: GestureEventLike) => {
+      if (!gestureActive) return
+      e.preventDefault()
+      cfg.current.setValue(clamp(gestureStartValue * e.scale))
+    }
+    const onGestureEnd = () => {
+      gestureActive = false
     }
 
     // --- Trackpad pinch / ctrl+wheel ---
@@ -88,19 +116,23 @@ export function usePinchZoom<T extends HTMLElement>(config: PinchZoomConfig) {
       cfg.current.setValue(clamp(cfg.current.getValue() * factor))
     }
 
-    el.addEventListener('pointerdown', onPointerDown)
-    el.addEventListener('pointermove', onPointerMove, { passive: false })
-    el.addEventListener('pointerup', onPointerUp)
-    el.addEventListener('pointercancel', onPointerUp)
-    el.addEventListener('pointerleave', onPointerUp)
+    el.addEventListener('touchstart', onTouchStart, { passive: false })
+    el.addEventListener('touchmove', onTouchMove, { passive: false })
+    el.addEventListener('touchend', onTouchEnd)
+    el.addEventListener('touchcancel', onTouchEnd)
+    el.addEventListener('gesturestart', onGestureStart as EventListener, { passive: false })
+    el.addEventListener('gesturechange', onGestureChange as EventListener, { passive: false })
+    el.addEventListener('gestureend', onGestureEnd as EventListener)
     el.addEventListener('wheel', onWheel, { passive: false })
 
     return () => {
-      el.removeEventListener('pointerdown', onPointerDown)
-      el.removeEventListener('pointermove', onPointerMove)
-      el.removeEventListener('pointerup', onPointerUp)
-      el.removeEventListener('pointercancel', onPointerUp)
-      el.removeEventListener('pointerleave', onPointerUp)
+      el.removeEventListener('touchstart', onTouchStart)
+      el.removeEventListener('touchmove', onTouchMove)
+      el.removeEventListener('touchend', onTouchEnd)
+      el.removeEventListener('touchcancel', onTouchEnd)
+      el.removeEventListener('gesturestart', onGestureStart as EventListener)
+      el.removeEventListener('gesturechange', onGestureChange as EventListener)
+      el.removeEventListener('gestureend', onGestureEnd as EventListener)
       el.removeEventListener('wheel', onWheel)
     }
   }, [])
