@@ -34,6 +34,12 @@ export default function MethodPicker({
   const visible =
     stageFilter === 'all' ? METHODS : METHODS.filter((m) => m.stage === stageFilter)
 
+  // Method dropdown order: group by family/classification (Bob, Surprise, …)
+  // alphabetically, then by name within each family.
+  const ordered = [...visible].sort(
+    (a, b) => a.classification.localeCompare(b.classification) || a.name.localeCompare(b.name),
+  )
+
   // When a single stage is chosen, the stage word (e.g. "Triples") is redundant
   // with the Stage dropdown, so drop it: "Grandsire Triples" -> "Grandsire".
   // In "All stages" we keep it, since it's the only thing distinguishing e.g.
@@ -100,7 +106,7 @@ export default function MethodPicker({
               id="method-select"
               value={methodName}
               onChange={onMethodChange}
-              options={visible.map((m) => ({ value: m.name, label: methodLabel(m) }))}
+              options={ordered.map((m) => ({ value: m.name, label: methodLabel(m) }))}
             />
           </div>
           <div className="field">
