@@ -1,18 +1,21 @@
 import { useState } from 'react'
 import './App.css'
-import { METHODS } from './data/methods'
 import MethodExplorer from './components/MethodExplorer'
 import MethodTrainer from './components/MethodTrainer'
 import InstallHint from './components/InstallHint'
 import InstallButton from './components/InstallButton'
+import { MethodCatalogProvider, useMethodCatalog } from './state/MethodCatalog'
 
 type Tab = 'explorer' | 'trainer'
 
-export default function App() {
+function AppInner() {
+  const { findMethod, pickerMethods } = useMethodCatalog()
   const [tab, setTab] = useState<Tab>('explorer')
   const [methodName, setMethodName] = useState<string>('Grandsire Triples')
 
-  const method = METHODS.find((m) => m.name === methodName) ?? METHODS[0]
+  // Resolve the selected method across all tiers (standard, used, loaded); fall
+  // back to the first picker method if the name can't be resolved.
+  const method = findMethod(methodName) ?? pickerMethods[0]
 
   return (
     <div className="app">
@@ -57,5 +60,13 @@ export default function App() {
         Built on <code>ringing-lib-ts</code> · © Emma Bruce 2026
       </footer>
     </div>
+  )
+}
+
+export default function App() {
+  return (
+    <MethodCatalogProvider>
+      <AppInner />
+    </MethodCatalogProvider>
   )
 }

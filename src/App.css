@@ -243,8 +243,104 @@ select, .btn {
 .dropdown-option.is-active { background: var(--surface); }
 .dropdown-option.is-selected { color: var(--accent2); font-weight: 600; }
 
+/* Pinned actions at the bottom of a dropdown menu (e.g. "Add methods…"). */
+.dropdown-actions {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--text-muted);
+  display: flex;
+  flex-direction: column;
+}
+.dropdown-action {
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 7px 10px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  color: var(--accent2);
+  cursor: pointer;
+}
+.dropdown-action:hover,
+.dropdown-action:focus-visible { background: var(--surface); outline: none; }
+
 /* A compact field for single-character choices (e.g. the Bell selector). */
 .field--narrow .dropdown-btn { width: auto; min-width: 52px; }
+
+/* ---- Method browser overlay (Add / Search the full CCCBR library) -------- */
+.browser-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 24px 12px;
+  background: rgba(0, 0, 0, 0.55);
+  overflow-y: auto;
+}
+.browser-panel {
+  width: min(520px, 100%);
+  background: var(--surface);
+  border: 1px solid var(--surface2);
+  border-radius: 10px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  padding: 16px;
+}
+.browser-head { display: flex; align-items: center; justify-content: space-between; }
+.browser-head h2 { margin: 0; font-size: 1.05rem; color: var(--accent2); }
+.browser-close {
+  background: none; border: none; color: var(--text-muted);
+  font-size: 1.1rem; cursor: pointer; padding: 4px 8px; border-radius: 6px;
+}
+.browser-close:hover { color: var(--text); background: var(--surface2); }
+.browser-hint { color: var(--text-muted); font-size: 0.8rem; margin: 8px 0 12px; }
+.browser-load-row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+/* Match the Load button to the class/stage dropdown box model so the row lines
+   up (same font, padding, line-height, border → same height). */
+.browser-load-row .btn { padding: 7px 14px; font-size: 0.85rem; line-height: 1.2; }
+.browser-status { min-height: 20px; margin-top: 10px; font-size: 0.8rem; color: var(--text-muted); }
+.browser-ok { color: var(--up-color); }
+.browser-err { color: var(--accent); }
+.browser-search { margin-top: 16px; border-top: 1px solid var(--surface2); padding-top: 12px; }
+.sr-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.browser-input {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--text-muted);
+  border-radius: 6px;
+  color: var(--text);
+  padding: 9px 12px;
+  font-size: 0.9rem;
+}
+.browser-input:disabled { opacity: 0.5; }
+.browser-results {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  max-height: 46vh;
+  overflow-y: auto;
+}
+.browser-result {
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  padding: 9px 10px;
+  cursor: pointer;
+  color: var(--text);
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+.browser-result:hover,
+.browser-result:focus-visible { background: var(--surface2); outline: none; }
+.browser-result-name { font-size: 0.9rem; }
+.browser-result-meta { font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px; }
+.browser-empty { color: var(--text-muted); font-size: 0.8rem; padding: 8px 10px; }
 
 /* Controls that are only useful on larger screens. On mobile, pinch-to-zoom
    replaces the zoom/text-size sliders, so hide them there to save space. */

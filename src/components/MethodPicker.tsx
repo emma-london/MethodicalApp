@@ -1,7 +1,13 @@
-import { useState } from 'react'
-import { METHODS, STAGES, STAGE_NAMES } from '../data/methods'
+import { lazy, Suspense, useState } from 'react'
+import { STAGE_NAMES } from '../data/methods'
+import type { MethodDef } from '../data/methods'
 import { SPLICE_SETS } from '../data/spliceSets'
+import { useMethodCatalog } from '../state/MethodCatalog'
 import Dropdown from './Dropdown'
+
+// Lazy so the CCCBR loader (and its parser) split into their own chunk, fetched
+// only when a power user opens the browser — off the launch path.
+const MethodBrowser = lazy(() => import('./MethodBrowser'))
 
 interface Props {
   methodName: string
@@ -26,13 +32,22 @@ export default function MethodPicker({
   spliceSetName,
   onSpliceSetChange,
 }: Props) {
+  // The picker shows the standard set plus any methods the ringer has used
+  // before (tier 1 + 2); the full CCCBR library lives behind the browser.
+  const { pickerMethods, stages, hasLoaded, remember } = useMethodCatalog()
+
   // Open on the stage of the currently-selected method so it's already narrowed
   // and the current choice is visible.
-  const currentStage = METHODS.find((m) => m.name === methodName)?.stage
+  const currentStage = pickerMethods.find((m) => m.name === methodName)?.stage
   const [stageFilter, setStageFilter] = useState<StageFilter>(currentStage ?? 'all')
 
+  // The method browser overlay (Add / Search the full CCCBR library).
+  const [browser, setBrowser] = useState<null | 'add' | 'search'>(null)
+
   const visible =
-    stageFilter === 'all' ? METHODS : METHODS.filter((m) => m.stage === stageFilter)
+    stageFilter === 'all'
+      ? pickerMethods
+      : pickerMethods.filter((m) => m.stage === stageFilter)
 
   // Method dropdown order: group by family/classification (Bob, Surprise, …)
   // alphabetically, then by name within each family.
@@ -44,7 +59,7 @@ export default function MethodPicker({
   // with the Stage dropdown, so drop it: "Grandsire Triples" -> "Grandsire".
   // In "All stages" we keep it, since it's the only thing distinguishing e.g.
   // Cambridge Surprise Minor / Major / Royal. The value stays the full name.
-  const methodLabel = (m: (typeof METHODS)[number]) => {
+  const methodLabel = (m: MethodDef) => {
     if (stageFilter === 'all') return m.name
     const word = STAGE_NAMES[m.stage]
     return word && m.name.endsWith(` ${word}`)
@@ -57,12 +72,30 @@ export default function MethodPicker({
     setStageFilter(next)
     // If the current method isn't in the new stage, jump to the first that is.
     const stillVisible =
-      next === 'all' || METHODS.some((m) => m.name === methodName && m.stage === next)
+      next === 'all' || pickerMethods.some((m) => m.name === methodName && m.stage === next)
     if (!stillVisible) {
-      const first = METHODS.find((m) => m.stage === next)
+      const first = pickerMethods.find((m) => m.stage === next)
       if (first) onMethodChange(first.name)
     }
   }
+
+  // Selecting a method in the browser makes it active and promotes it to the
+  // "used" tier so it appears inline in the picker next time.
+  const handleBrowserPick = (m: MethodDef) => {
+    remember(m)
+    onMethodChange(m.name)
+    setStageFilter(m.stage)
+    setBrowser(null)
+  }
+
+  // Bottom-of-list actions on the method dropdown: load a CCCBR file, and (once
+  // something is loaded) search what's been loaded.
+  const methodActions = [
+    { label: '+ Add methods from CCCBR…', onSelect: () => setBrowser('add') },
+    ...(hasLoaded
+      ? [{ label: '🔍 Search loaded methods…', onSelect: () => setBrowser('search') }]
+      : []),
+  ]
 
   const splicedEnabled = !!onSpliceModeChange && SPLICE_SETS.length > 0
 
@@ -107,6 +140,7 @@ export default function MethodPicker({
               value={methodName}
               onChange={onMethodChange}
               options={ordered.map((m) => ({ value: m.name, label: methodLabel(m) }))}
+              actions={methodActions}
             />
           </div>
           <div className="field">
@@ -118,11 +152,22 @@ export default function MethodPicker({
               tallMenu
               options={[
                 { value: 'all', label: 'All stages' },
-                ...STAGES.map((s) => ({ value: String(s), label: String(STAGE_NAMES[s] ?? s) })),
+                ...stages.map((s) => ({ value: String(s), label: String(STAGE_NAMES[s] ?? s) })),
               ]}
             />
           </div>
         </>
+      )}
+
+      {browser && (
+        <Suspense fallback={null}>
+          <MethodBrowser
+            initialMode={browser}
+            initialStage={typeof stageFilter === 'number' ? stageFilter : currentStage}
+            onPick={handleBrowserPick}
+            onClose={() => setBrowser(null)}
+          />
+        </Suspense>
       )}
     </>
   )

@@ -5,6 +5,15 @@ export interface DropdownOption {
   label: string
 }
 
+/**
+ * A pinned command at the bottom of the menu (e.g. "Add methods…"). Unlike an
+ * option it doesn't change the value — it runs an action and closes the menu.
+ */
+export interface DropdownAction {
+  label: string
+  onSelect: () => void
+}
+
 interface Props {
   value: string
   options: DropdownOption[]
@@ -14,6 +23,8 @@ interface Props {
   ariaLabel?: string
   /** Give the menu a taller cap (e.g. the Stage list, which should fit fully). */
   tallMenu?: boolean
+  /** Optional pinned actions rendered below the options, after a divider. */
+  actions?: DropdownAction[]
 }
 
 /**
@@ -25,7 +36,7 @@ interface Props {
  * touch, and keyboard (arrows / Home / End / Enter / Escape), closes on outside
  * click, and exposes listbox/option roles for assistive tech.
  */
-export default function Dropdown({ value, options, onChange, id, ariaLabel, tallMenu }: Props) {
+export default function Dropdown({ value, options, onChange, id, ariaLabel, tallMenu, actions }: Props) {
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(0)
   const rootRef = useRef<HTMLDivElement | null>(null)
@@ -140,6 +151,23 @@ export default function Dropdown({ value, options, onChange, id, ariaLabel, tall
               {o.label}
             </li>
           ))}
+          {actions && actions.length > 0 && (
+            <li className="dropdown-actions" role="presentation">
+              {actions.map((a) => (
+                <button
+                  key={a.label}
+                  type="button"
+                  className="dropdown-action"
+                  onClick={() => {
+                    setOpen(false)
+                    a.onSelect()
+                  }}
+                >
+                  {a.label}
+                </button>
+              ))}
+            </li>
+          )}
         </ul>
       )}
     </div>
