@@ -281,9 +281,7 @@ export default function MethodTrainer({ method, methodName, onMethodChange }: Pr
             const isLeadHead = usingSplice
               ? absolute === 0 || methodMarks.has(absolute)
               : singleLeadLength > 0 && absolute % singleLeadLength === 0
-            const pbMark = isLeadHead
-              ? placeBellName(row.toArray().indexOf(wb) + 1)
-              : undefined
+            const pbPlace = isLeadHead ? row.toArray().indexOf(wb) + 1 : undefined
             return (
               <div
                 key={absolute}
@@ -295,17 +293,25 @@ export default function MethodTrainer({ method, methodName, onMethodChange }: Pr
                     {bellToChar(bell)}
                   </span>
                 ))}
-                {(mMark || pbMark) && (
+                {/* Left of the row: which method this lead was (spliced) and any
+                    call made at its end. Place bells now live on the right. */}
+                {(mMark || mark) && (
                   <span className="lead-marks">
                     {mMark && <span className="lead-pill lead-pill--method">{mMark}</span>}
-                    {pbMark && (
-                      <span className="lead-pill lead-pill--pb" title={`${pbMark} place bell`}>
-                        {pbMark}
+                    {mark && (
+                      <span className={`lead-pill lead-pill--call lead-pill--${mark.toLowerCase()}`}>
+                        {mark}
                       </span>
                     )}
                   </span>
                 )}
-                {mark && <span className={`call-mark call-mark--${mark.toLowerCase()}`}>{mark}</span>}
+                {/* Right of the row: the place bell the ringer's own bell rings
+                    for the lead starting here, as a number in a circle. */}
+                {pbPlace !== undefined && (
+                  <span className="pb-circle" title={`${placeBellName(pbPlace)} place bell`}>
+                    {bellToChar(pbPlace - 1)}
+                  </span>
+                )}
               </div>
             )
           })}

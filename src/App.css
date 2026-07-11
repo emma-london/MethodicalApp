@@ -267,23 +267,34 @@ select, .btn {
 .rows-grid .b-treble { color: var(--treble); font-weight: 700; }
 .rows-grid .b-work { color: var(--workbell); font-weight: 700; }
 .rows-grid .lead-end { border-bottom: 1px dashed var(--text-muted); }
+
 /* Place bell at a lead head — the place the working bell reaches at the lead end,
-   i.e. the place bell it rings for the next lead. */
-.rows-grid .pb-mark {
+   i.e. the place bell it rings for the next lead. Shown as the place number in a
+   circle, sat just to the right of the row (a similar size to the row numbers,
+   which we know reads well). Shared by the explorer and the trainer. */
+.pb-circle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 1.7em;
+  height: 1.7em;
+  border-radius: 50%;
+  border: 2px solid var(--workbell);
+  background: var(--surface);
+  color: var(--workbell);
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 0.82em;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: normal;
+}
+.row .pb-circle {
   position: absolute;
-  right: 100%;
+  left: 100%;
   top: 50%;
   transform: translateY(-50%);
-  margin-right: 10px;
-  padding: 1px 6px;
-  border-radius: 6px;
-  background: var(--workbell);
-  color: #101018;
-  font-family: system-ui, -apple-system, sans-serif;
-  font-size: 0.6em;
-  font-weight: 700;
-  letter-spacing: normal;
-  white-space: nowrap;
+  margin-left: 12px;
 }
 
 /* Pinch-to-zoom is bound page-wide (usePinchZoom → document), so suppress the
@@ -350,31 +361,18 @@ body {
   padding: 16px;
   min-height: 30vh;
 }
-.trainer-rows { font-family: ui-monospace, monospace; font-size: clamp(16px, 5vw, 24px); line-height: 1.7; letter-spacing: 0.4em; text-align: center; }
+/* A centred flex column (like the explorer's .rows-grid) so each row is only as
+   wide as its content — that keeps the left-hand call marks and the right-hand
+   place-bell circle hugging the row rather than the full container width. */
+.trainer-rows { display: flex; flex-direction: column; align-items: center; font-family: ui-monospace, monospace; font-size: clamp(16px, 5vw, 24px); line-height: 1.7; letter-spacing: 0.4em; text-align: center; }
 .trainer-rows .row { position: relative; }
 .trainer-rows .row.current { background: var(--surface2); border-radius: 6px; }
-.call-mark {
-  position: absolute;
-  right: 4px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-family: system-ui, -apple-system, sans-serif;
-  letter-spacing: normal;
-  font-size: 0.62rem;
-  font-weight: 700;
-  padding: 2px 7px;
-  border-radius: 6px;
-  color: var(--bg);
-}
-.call-mark--bob { background: var(--down-color); }
-.call-mark--single { background: var(--accent); }
-/* Spliced: which method this lead was. Sits left of any call mark. */
-.call-mark--method { background: var(--accent2); right: auto; left: 4px; }
-/* Lead-head marks (method name + place bell) grouped on the left, so they never
-   collide with a call mark on the right. */
+/* Lead-head marks (method name + any call) grouped on the left. The place bell
+   sits opposite, on the right, so the two never collide. */
 .lead-marks {
   position: absolute;
-  left: 4px;
+  right: 100%;
+  margin-right: 12px;
   top: 50%;
   transform: translateY(-50%);
   display: flex;
@@ -391,7 +389,10 @@ body {
   color: var(--bg);
 }
 .lead-pill--method { background: var(--accent2); }
-.lead-pill--pb { background: var(--workbell); color: #101018; }
+/* A call made at this lead end (bob/single), sat in the left-hand group. */
+.lead-pill--call { color: var(--bg); }
+.lead-pill--bob { background: var(--down-color); }
+.lead-pill--single { background: var(--accent); }
 /* Selected bells: coloured background, near-black font — high contrast for legibility.
    letter-spacing:normal keeps the row's inter-bell gap OUT of the pill (so it hugs the
    digit and isn't wide on the right); margin-right restores that gap outside the pill. */

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Row } from 'ringing-lib-ts'
 import { bellToChar } from 'ringing-lib-ts'
-import { bellPath, placeBellName } from '../logic/course'
+import { bellPath } from '../logic/course'
 
 interface Props {
   rows: Row[]
@@ -17,9 +17,11 @@ interface Props {
 const PAD = 18
 const MIN_DX = 16
 const MAX_DX = 60
-// Left gutter reserved for place-bell labels, so they sit clear of the line
-// (to the left of 1st place) rather than overlapping it.
-const LABEL_W = 40
+// Right-hand gutter reserved for the place-bell circles, so they sit clear of
+// the line (to the right of the highest place) rather than overlapping it.
+const PB_GUTTER = 34
+const PB_R = 10 // place-bell circle radius
+const PB_FONT = 14 // place-bell number size (≈ the numbers-view row size)
 
 export default function Blueline({
   rows,
@@ -35,8 +37,8 @@ export default function Blueline({
   const wrapRef = useRef<HTMLDivElement>(null)
   const [availW, setAvailW] = useState(0)
 
-  // x origin of 1st place — the drawing is shifted right to leave the label gutter.
-  const OX = PAD + LABEL_W
+  // x origin of 1st place. Place-bell circles live in a gutter on the right.
+  const OX = PAD
 
   // Measure the container so the blue line spreads across the available width.
   useEffect(() => {
@@ -52,7 +54,7 @@ export default function Blueline({
   // Column spacing: fill the width, but clamp so it never gets silly.
   const dx =
     availW > 0
-      ? Math.max(MIN_DX, Math.min(MAX_DX, (availW - PAD * 2 - LABEL_W) / Math.max(1, stage - 1)))
+      ? Math.max(MIN_DX, Math.min(MAX_DX, (availW - PAD * 2 - PB_GUTTER) / Math.max(1, stage - 1)))
       : 26
 
   const { treble, work, others, width, height, placeBells } = useMemo(() => {
@@ -79,7 +81,7 @@ export default function Blueline({
       work,
       others,
       placeBells,
-      width: (stage - 1) * dx + PAD * 2 + LABEL_W,
+      width: (stage - 1) * dx + PAD * 2 + PB_GUTTER,
       height: (rows.length - 1) * dy + PAD * 2,
     }
   }, [rows, stage, workingBell, dx, dy, leadLength, OX, otherBells])
@@ -153,24 +155,30 @@ export default function Blueline({
         {/* start markers */}
         <circle cx={treble[0] * dx + OX} cy={PAD} r={4} fill="var(--treble)" />
         <circle cx={work[0] * dx + OX} cy={PAD} r={4} fill="var(--workbell)" />
-        {/* place bells: a dot on the working line at each lead head, with the
-            label aligned in the left gutter (clear of the line). */}
-        {placeBells.map(({ i, place }) => (
-          <g key={i}>
-            <circle cx={work[i] * dx + OX} cy={i * dy + PAD} r={3.5} fill="var(--workbell)" />
-            <text
-              x={OX - 8}
-              y={i * dy + PAD}
-              fontSize={11}
-              fontWeight={700}
-              fill="var(--workbell)"
-              textAnchor="end"
-              dominantBaseline="middle"
-            >
-              {placeBellName(place)}
-            </text>
-          </g>
-        ))}
+        {/* place bells: a small anchor dot on the working line at each lead head,
+            with the place-bell number in a circle out in the right gutter, level
+            with that row. */}
+        {placeBells.map(({ i, place }) => {
+          const cy = i * dy + PAD
+          const cx = (stage - 1) * dx + OX + PB_GUTTER / 2
+          return (
+            <g key={i}>
+              <circle cx={work[i] * dx + OX} cy={cy} r={3} fill="var(--workbell)" />
+              <circle cx={cx} cy={cy} r={PB_R} fill="var(--surface)" stroke="var(--workbell)" strokeWidth={2} />
+              <text
+                x={cx}
+                y={cy}
+                fontSize={PB_FONT}
+                fontWeight={700}
+                fill="var(--workbell)"
+                textAnchor="middle"
+                dominantBaseline="central"
+              >
+                {bellToChar(place - 1)}
+              </text>
+            </g>
+          )
+        })}
       </svg>
     </div>
   )

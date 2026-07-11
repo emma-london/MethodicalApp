@@ -185,10 +185,10 @@ export default function MethodExplorer({ method, methodName, onMethodChange }: P
                 ))}
                 {showPlaceBell && (
                   <span
-                    className="pb-mark"
+                    className="pb-circle"
                     title={`${placeBellName(chars.indexOf(wb) + 1)} place bell`}
                   >
-                    {placeBellName(chars.indexOf(wb) + 1)}
+                    {bellToChar(chars.indexOf(wb))}
                   </span>
                 )}
               </div>
