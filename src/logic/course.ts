@@ -145,6 +145,62 @@ export function generateLeads(
   return { rows, callsAt, callMarks, methodAt, methodMarks, leadMethodAt, endRow: row }
 }
 
+export interface CallExample {
+  /** The windowed rows: context before the lead end, the lead end, context after. */
+  rows: Row[]
+  /** Index within `rows` of the called lead-end row. */
+  leadEndIndex: number
+}
+
+/**
+ * The rows around the end of the *first* lead when `call` is called there,
+ * windowed to `rowsBefore` rows of context before the lead end and `rowsAfter`
+ * after. Used to show what a bob or single does to the plain course. The call
+ * substitutes its `changes` into the tail of the first lead (respecting its
+ * optional `position` offset); everything after the lead end is then plain.
+ */
+export function callExampleRows(
+  method: Method,
+  call: CallDefinition,
+  rowsBefore: number,
+  rowsAfter: number,
+): CallExample {
+  const rounds = Row.rounds(method.stage)
+  const all: Row[] = [rounds]
+
+  // Build the first lead's changes with the call substituted into the tail.
+  const base = [...method]
+  const k = call.changes.length
+  const pos = call.position ?? 0
+  const endIdx = base.length - 1 - pos // index of the replacement's final change
+  const startIdx = endIdx - k + 1
+  for (let j = 0; j < k; j++) {
+    const at = startIdx + j
+    if (at >= 0 && at < base.length) base[at] = call.changes[j]
+  }
+
+  let row = rounds
+  for (const ch of base) {
+    row = ch.apply(row)
+    all.push(row)
+  }
+  const leadEndIndex = all.length - 1 // the called lead head
+
+  // Continue with plain leads until we have enough context after the lead end.
+  let safety = 0
+  while (all.length - 1 - leadEndIndex < rowsAfter && safety < 50) {
+    for (const ch of method) {
+      row = ch.apply(row)
+      all.push(row)
+    }
+    safety++
+  }
+
+  const start = Math.max(0, leadEndIndex - rowsBefore)
+  const end = Math.min(all.length - 1, leadEndIndex + rowsAfter)
+  return { rows: all.slice(start, end + 1), leadEndIndex: leadEndIndex - start }
+}
+
 /** 0-based place (position, 0 = front/lead) of `bell` in each row. */
 export function bellPath(rows: Row[], bell: number): number[] {
   return rows.map((r) => r.toArray().indexOf(bell))

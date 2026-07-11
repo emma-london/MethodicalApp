@@ -95,6 +95,15 @@ export default function MethodPicker({
       ) : (
         <>
           <div className="field">
+            <label htmlFor="method-select">Method</label>
+            <Dropdown
+              id="method-select"
+              value={methodName}
+              onChange={onMethodChange}
+              options={visible.map((m) => ({ value: m.name, label: methodLabel(m) }))}
+            />
+          </div>
+          <div className="field">
             <label htmlFor="stage-select">Stage</label>
             <Dropdown
               id="stage-select"
@@ -105,15 +114,6 @@ export default function MethodPicker({
                 { value: 'all', label: 'All stages' },
                 ...STAGES.map((s) => ({ value: String(s), label: String(STAGE_NAMES[s] ?? s) })),
               ]}
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="method-select">Method</label>
-            <Dropdown
-              id="method-select"
-              value={methodName}
-              onChange={onMethodChange}
-              options={visible.map((m) => ({ value: m.name, label: methodLabel(m) }))}
             />
           </div>
         </>

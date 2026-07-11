@@ -9,6 +9,9 @@ interface Props {
   workingBell: number // 0-based
   rowHeight?: number // vertical spacing per row (px); lower = more squashed
   leadLength?: number // rows per lead; enables place-bell labels at lead heads
+  otherBells?: boolean // draw every other bell as a faint grey line behind
+  markRowIndex?: number // draw a dashed horizontal marker at this row index
+  hideLegend?: boolean // hide the legend (for compact example views)
 }
 
 const PAD = 18
@@ -18,7 +21,16 @@ const MAX_DX = 60
 // (to the left of 1st place) rather than overlapping it.
 const LABEL_W = 40
 
-export default function Blueline({ rows, stage, workingBell, rowHeight = 6, leadLength = 0 }: Props) {
+export default function Blueline({
+  rows,
+  stage,
+  workingBell,
+  rowHeight = 6,
+  leadLength = 0,
+  otherBells = false,
+  markRowIndex,
+  hideLegend = false,
+}: Props) {
   const dy = rowHeight
   const wrapRef = useRef<HTMLDivElement>(null)
   const [availW, setAvailW] = useState(0)
@@ -43,9 +55,17 @@ export default function Blueline({ rows, stage, workingBell, rowHeight = 6, lead
       ? Math.max(MIN_DX, Math.min(MAX_DX, (availW - PAD * 2 - LABEL_W) / Math.max(1, stage - 1)))
       : 26
 
-  const { treble, work, width, height, placeBells } = useMemo(() => {
+  const { treble, work, others, width, height, placeBells } = useMemo(() => {
     const treble = bellPath(rows, 0)
     const work = bellPath(rows, workingBell)
+    // Every other bell (not treble, not the working bell), drawn faint grey.
+    const others: number[][] = []
+    if (otherBells) {
+      for (let b = 0; b < stage; b++) {
+        if (b === 0 || b === workingBell) continue
+        others.push(bellPath(rows, b))
+      }
+    }
     // Place bell at each lead head (skip the final rounds row).
     const placeBells: { i: number; place: number }[] = []
     if (leadLength > 0) {
@@ -57,22 +77,25 @@ export default function Blueline({ rows, stage, workingBell, rowHeight = 6, lead
     return {
       treble,
       work,
+      others,
       placeBells,
       width: (stage - 1) * dx + PAD * 2 + LABEL_W,
       height: (rows.length - 1) * dy + PAD * 2,
     }
-  }, [rows, stage, workingBell, dx, dy, leadLength, OX])
+  }, [rows, stage, workingBell, dx, dy, leadLength, OX, otherBells])
 
   const toPoints = (path: number[]) =>
     path.map((place, i) => `${place * dx + OX},${i * dy + PAD}`).join(' ')
 
   return (
     <div className="blueline-wrap" ref={wrapRef}>
-      <div className="legend">
-        <span><i className="swatch" style={{ background: 'var(--treble)' }} /> Treble (1)</span>
-        <span><i className="swatch" style={{ background: 'var(--workbell)' }} /> Working bell ({bellToChar(workingBell)})</span>
-        {leadLength > 0 && <span className="legend-note">Labels = place bell at each lead end</span>}
-      </div>
+      {!hideLegend && (
+        <div className="legend">
+          <span><i className="swatch" style={{ background: 'var(--treble)' }} /> Treble (1)</span>
+          <span><i className="swatch" style={{ background: 'var(--workbell)' }} /> Working bell ({bellToChar(workingBell)})</span>
+          {leadLength > 0 && <span className="legend-note">Labels = place bell at each lead end</span>}
+        </div>
+      )}
       <svg width={width} height={height} role="img" aria-label="Blue line">
         {/* faint place columns */}
         {Array.from({ length: stage }, (_, p) => (
@@ -86,6 +109,31 @@ export default function Blueline({ rows, stage, workingBell, rowHeight = 6, lead
             strokeWidth={1}
           />
         ))}
+        {/* every other bell, faint grey, behind the treble & working lines */}
+        {others.map((path, idx) => (
+          <polyline
+            key={`other-${idx}`}
+            points={toPoints(path)}
+            fill="none"
+            stroke="var(--text-muted)"
+            strokeWidth={1.5}
+            strokeOpacity={0.45}
+            strokeLinejoin="round"
+            strokeLinecap="round"
+          />
+        ))}
+        {/* dashed marker at the lead end (where the call takes effect) */}
+        {markRowIndex != null && (
+          <line
+            x1={PAD}
+            y1={markRowIndex * dy + PAD}
+            x2={width - PAD}
+            y2={markRowIndex * dy + PAD}
+            stroke="var(--text-muted)"
+            strokeWidth={1}
+            strokeDasharray="4 3"
+          />
+        )}
         <polyline
           points={toPoints(treble)}
           fill="none"

@@ -4,7 +4,7 @@
   --surface2: #0f3460;
   --accent: #e94560;
   --accent2: #53c0f0;
-  --treble: #e94560;   /* treble line — red */
+  --treble: #d15563;   /* treble line — red (softened, less bright) */
   --workbell: #53c0f0; /* working bell line — blue */
   --up-color: #4caf82;
   --down-color: #f0a853;
@@ -313,6 +313,23 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .zoom-hint { transition: none; }
 }
+
+/* Bobs & Singles examples */
+.call-examples { margin-top: 22px; padding-top: 14px; border-top: 1px solid var(--surface2); }
+.call-examples__title { color: var(--accent2); font-size: 1rem; margin: 0 0 4px; }
+.call-examples__note { color: var(--text-muted); font-size: 0.78rem; margin: 0 0 12px; }
+.call-examples__grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+@media (max-width: 640px) { .call-examples__grid { grid-template-columns: 1fr; } }
+.call-example { background: var(--surface); border-radius: 8px; padding: 12px; }
+.call-example__label {
+  margin: 0 0 8px;
+  font-size: 0.8rem;
+  color: var(--text);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+/* The nested blue line already sits inside a .call-example card. */
+.call-example .blueline-wrap { background: transparent; padding: 0; }
 
 /* Blueline */
 .blueline-wrap { overflow-x: auto; background: var(--surface); border-radius: 8px; padding: 12px; text-align: center; }

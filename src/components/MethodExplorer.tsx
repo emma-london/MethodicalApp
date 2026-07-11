@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { bellToChar } from 'ringing-lib-ts'
+import type { Method } from 'ringing-lib-ts'
 import type { MethodDef } from '../data/methods'
 import { buildMethod, plainCourseRows, placeBellName } from '../logic/course'
 import MethodPicker from './MethodPicker'
 import Blueline from './Blueline'
+import CallExamples from './CallExamples'
 import Dropdown from './Dropdown'
 import { usePinchZoom } from '../hooks/usePinchZoom'
 
@@ -57,12 +59,17 @@ export default function MethodExplorer({ method, methodName, onMethodChange }: P
     }
   }, [textSize])
 
-  const { rows, leadLength, error } = useMemo(() => {
+  const { rows, leadLength, built, error } = useMemo(() => {
     try {
       const m = buildMethod(method)
-      return { rows: plainCourseRows(m), leadLength: m.leadLength, error: null as string | null }
+      return {
+        rows: plainCourseRows(m),
+        leadLength: m.leadLength,
+        built: m as Method | null,
+        error: null as string | null,
+      }
     } catch (e) {
-      return { rows: [], leadLength: 0, error: (e as Error).message }
+      return { rows: [], leadLength: 0, built: null as Method | null, error: (e as Error).message }
     }
   }, [method])
 
@@ -198,6 +205,17 @@ export default function MethodExplorer({ method, methodName, onMethodChange }: P
         />
       )}
       </div>
+
+      {built && (
+        <CallExamples
+          method={built}
+          stage={method.stage}
+          workingBell={wb}
+          view={view}
+          rowHeight={rowHeight}
+          textSize={textSize}
+        />
+      )}
 
       <p className="meta meta--bottom">
         <strong>{method.name}</strong> · {method.classification} · {method.notation} · plain course of {rows.length - 1} rows
