@@ -33,6 +33,18 @@ const STANDARD_8_SURPRISE_MAJOR: SpliceSet = {
   ],
 }
 
+// Horton's 4 - a challenging Surprise Major selection
+const HORTONS_4_SURPRISE_MAJOR: SpliceSet = {
+  name: 'Horton\'s 4 Surprise Major',
+  stage: 8,
+  methods: [
+    'Bristol Surprise Major',
+	'London Surprise Major',
+	'Belfast Surprise Major',
+	'Glasgow Surprise Major',
+  ],
+}
+
 // A classic introductory pair — Kent and Oxford Treble Bob are commonly spliced
 // together as a first taste of changing method.
 const KENT_OXFORD_TREBLE_BOB_MAJOR: SpliceSet = {
@@ -66,6 +78,7 @@ const SURPRISE_MAXIMUS: SpliceSet = {
 
 const ALL: SpliceSet[] = [
   STANDARD_8_SURPRISE_MAJOR,
+  HORTONS_4_SURPRISE_MAJOR,
   KENT_OXFORD_TREBLE_BOB_MAJOR,
   SURPRISE_MINOR,
   SURPRISE_ROYAL,
