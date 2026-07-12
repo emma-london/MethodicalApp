@@ -13,6 +13,12 @@ interface Props {
   markRowIndex?: number // draw a dashed horizontal marker at this row index
   hideLegend?: boolean // hide the legend (for compact example views)
   onToggleOtherBells?: (show: boolean) => void // if set, show an "all bells" toggle in the legend
+  // Coursing: colour the working bell's course (green) & after (amber) bells.
+  courseBell?: number // 0-based; the bell the working bell follows up
+  afterBell?: number // 0-based; the bell that follows the working bell
+  coursingAvailable?: boolean // whether a coursing order exists for this bell
+  showCoursing?: boolean // whether to colour the course/after lines
+  onToggleCoursing?: (show: boolean) => void // if set, show a "Course Bells" toggle
 }
 
 const PAD = 18
@@ -34,7 +40,14 @@ export default function Blueline({
   markRowIndex,
   hideLegend = false,
   onToggleOtherBells,
+  courseBell,
+  afterBell,
+  coursingAvailable = false,
+  showCoursing = false,
+  onToggleCoursing,
 }: Props) {
+  // Only actually colour the coursing lines when a valid order exists.
+  const coursingOn = showCoursing && coursingAvailable && courseBell != null && afterBell != null
   const dy = rowHeight
   const wrapRef = useRef<HTMLDivElement>(null)
   const [availW, setAvailW] = useState(0)
@@ -59,14 +72,20 @@ export default function Blueline({
       ? Math.max(MIN_DX, Math.min(MAX_DX, (availW - PAD * 2 - PB_GUTTER) / Math.max(1, stage - 1)))
       : 26
 
-  const { treble, work, others, width, height, placeBells } = useMemo(() => {
+  const { treble, work, others, coursePath, afterPath, width, height, placeBells } = useMemo(() => {
     const treble = bellPath(rows, 0)
     const work = bellPath(rows, workingBell)
+    // The coursing lines (drawn coloured, at grey weight) when enabled.
+    const coursePath = coursingOn ? bellPath(rows, courseBell!) : null
+    const afterPath = coursingOn ? bellPath(rows, afterBell!) : null
     // Every other bell (not treble, not the working bell), drawn faint grey.
+    // Skip the coursing bells when they're being coloured, so we don't draw them
+    // twice.
     const others: number[][] = []
     if (otherBells) {
       for (let b = 0; b < stage; b++) {
         if (b === 0 || b === workingBell) continue
+        if (coursingOn && (b === courseBell || b === afterBell)) continue
         others.push(bellPath(rows, b))
       }
     }
@@ -82,11 +101,13 @@ export default function Blueline({
       treble,
       work,
       others,
+      coursePath,
+      afterPath,
       placeBells,
       width: (stage - 1) * dx + PAD * 2 + PB_GUTTER,
       height: (rows.length - 1) * dy + PAD * 2,
     }
-  }, [rows, stage, workingBell, dx, dy, leadLength, OX, otherBells])
+  }, [rows, stage, workingBell, dx, dy, leadLength, OX, otherBells, coursingOn, courseBell, afterBell])
 
   const toPoints = (path: number[]) =>
     path.map((place, i) => `${place * dx + OX},${i * dy + PAD}`).join(' ')
@@ -97,16 +118,39 @@ export default function Blueline({
         <div className="legend">
           <span><i className="swatch" style={{ background: 'var(--treble)' }} /> Treble (1)</span>
           <span><i className="swatch" style={{ background: 'var(--workbell)' }} /> Working bell ({bellToChar(workingBell)})</span>
-          {leadLength > 0 && <span className="legend-note">Labels = place bell at each lead end</span>}
-          {onToggleOtherBells && (
-            <label className="legend-toggle">
-              <input
-                type="checkbox"
-                checked={otherBells}
-                onChange={(e) => onToggleOtherBells(e.target.checked)}
-              />
-              Show all bells
-            </label>
+          {coursingOn && (
+            <>
+              <span><i className="swatch" style={{ background: 'var(--up-color)' }} /> Course ({bellToChar(courseBell!)})</span>
+              <span><i className="swatch" style={{ background: 'var(--down-color)' }} /> After ({bellToChar(afterBell!)})</span>
+            </>
+          )}
+          {(onToggleCoursing || onToggleOtherBells) && (
+            <span className="legend-toggles">
+              {onToggleCoursing && (
+                <label
+                  className={`legend-toggle${coursingAvailable ? '' : ' is-disabled'}`}
+                  title={coursingAvailable ? undefined : 'No coursing order for this bell'}
+                >
+                  <input
+                    type="checkbox"
+                    checked={showCoursing && coursingAvailable}
+                    disabled={!coursingAvailable}
+                    onChange={(e) => onToggleCoursing(e.target.checked)}
+                  />
+                  Course Bells
+                </label>
+              )}
+              {onToggleOtherBells && (
+                <label className="legend-toggle">
+                  <input
+                    type="checkbox"
+                    checked={otherBells}
+                    onChange={(e) => onToggleOtherBells(e.target.checked)}
+                  />
+                  Show all bells
+                </label>
+              )}
+            </span>
           )}
         </div>
       )}
@@ -136,6 +180,28 @@ export default function Blueline({
             strokeLinecap="round"
           />
         ))}
+        {/* coursing bells: same weight as the grey lines, but coloured — course
+            bell green, after bell amber. Sit above the grey, below treble/work. */}
+        {coursePath && (
+          <polyline
+            points={toPoints(coursePath)}
+            fill="none"
+            stroke="var(--up-color)"
+            strokeWidth={1}
+            strokeLinejoin="round"
+            strokeLinecap="round"
+          />
+        )}
+        {afterPath && (
+          <polyline
+            points={toPoints(afterPath)}
+            fill="none"
+            stroke="var(--down-color)"
+            strokeWidth={1}
+            strokeLinejoin="round"
+            strokeLinecap="round"
+          />
+        )}
         {/* dashed marker at the lead end (where the call takes effect) */}
         {markRowIndex != null && (
           <line
@@ -152,7 +218,7 @@ export default function Blueline({
           points={toPoints(treble)}
           fill="none"
           stroke="var(--treble)"
-          strokeWidth={1.5}
+          strokeWidth={1.25}
           strokeLinejoin="round"
           strokeLinecap="round"
         />

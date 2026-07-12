@@ -212,6 +212,63 @@ export function callExampleRows(
   return { rows: all.slice(start, end + 1), leadEndIndex: leadEndIndex - start }
 }
 
+/** A working bell's coursing neighbours (all 0-based bell numbers). */
+export interface CoursingBells {
+  /** The bell it follows up to the back. */
+  course: number
+  /** The bell that follows it. */
+  after: number
+}
+
+/**
+ * The course bell and after bell for `workingBell` in the plain course, or null
+ * when there is no coursing order to speak of (the treble or another hunt bell,
+ * or too few rows). All 0-based.
+ *
+ * The coursing order is read off the first lead head at the fixed "coursing
+ * positions" for the stage — the even places up the back, then the odd places
+ * back down: 2,4,6,8,7,5,3 on Major. Those positions are a property of the
+ * stage, not the method, so this yields the true coursing order regardless of
+ * how far a given method's lead advances it. (Plain Bob and Cambridge Major
+ * share a coursing order even though their lead heads differ — reading the raw
+ * lead-head cycle would wrongly give Cambridge a different answer.) The working
+ * bell's neighbours in that order are the bell it follows up (course) and the
+ * bell that follows it (after). Hunt bells are fixed points of the lead-head
+ * permutation and are dropped, so they can't be flagged or used as a partner
+ * (e.g. Grandsire's 2).
+ */
+export function coursingBells(
+  rows: Row[],
+  leadLength: number,
+  workingBell: number,
+): CoursingBells | null {
+  if (leadLength <= 0 || workingBell === 0) return null
+  const lh = rows[leadLength] // the first lead head
+  if (!lh) return null
+  const arr = lh.toArray()
+  const stage = arr.length
+  if (workingBell >= stage) return null
+
+  // A hunt bell returns to its starting position after one lead.
+  const isHunt = (b: number) => arr.indexOf(b) === b
+  if (isHunt(workingBell)) return null
+
+  // Coursing positions for the stage (1-based): 2,4,6,… up, then …,7,5,3 down.
+  const places: number[] = []
+  for (let p = 2; p <= stage; p += 2) places.push(p)
+  for (let p = stage % 2 === 0 ? stage - 1 : stage; p >= 3; p -= 2) places.push(p)
+
+  // The coursing order: the bells at those positions, hunt bells removed.
+  const seq = places.map((p) => arr[p - 1]).filter((b) => !isHunt(b))
+  const i = seq.indexOf(workingBell)
+  if (i < 0 || seq.length < 2) return null
+
+  return {
+    course: seq[(i + 1) % seq.length], // the bell we follow up to the back
+    after: seq[(i - 1 + seq.length) % seq.length], // the bell that follows us
+  }
+}
+
 /** 0-based place (position, 0 = front/lead) of `bell` in each row. */
 export function bellPath(rows: Row[], bell: number): number[] {
   return rows.map((r) => r.toArray().indexOf(bell))

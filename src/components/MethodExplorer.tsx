@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { bellToChar } from 'ringing-lib-ts'
 import type { Method } from 'ringing-lib-ts'
 import type { MethodDef } from '../data/methods'
-import { buildMethod, plainCourseRows, placeBellName } from '../logic/course'
+import { buildMethod, plainCourseRows, placeBellName, coursingBells } from '../logic/course'
 import MethodPicker from './MethodPicker'
 import Blueline from './Blueline'
 import CallExamples from './CallExamples'
@@ -22,6 +22,8 @@ const ROW_HEIGHT_KEY = 'methodical.explorer.rowHeight'
 const TEXT_SIZE_KEY = 'methodical.explorer.textSize'
 // Whether the blue line draws every other bell as a faint grey line.
 const SHOW_ALL_BELLS_KEY = 'methodical.explorer.showAllBells'
+// Whether the blue line colours the working bell's course & after bells.
+const SHOW_COURSING_KEY = 'methodical.explorer.showCoursing'
 // Once the reader has zoomed by gesture, we stop nagging them with the hint.
 const ZOOM_HINT_KEY = 'methodical.explorer.zoomHintSeen'
 
@@ -45,6 +47,7 @@ export default function MethodExplorer({ method, methodName, onMethodChange }: P
   const [textSize, setTextSize] = useState(() => loadNumber(TEXT_SIZE_KEY, 18)) // numbers view font size (px)
   const [hintOn, setHintOn] = useState(() => loadNumber(ZOOM_HINT_KEY, 0) === 0) // show until first gesture
   const [showAllBells, setShowAllBells] = useState(() => loadNumber(SHOW_ALL_BELLS_KEY, 0) === 1)
+  const [showCoursing, setShowCoursing] = useState(() => loadNumber(SHOW_COURSING_KEY, 0) === 1)
 
   // Persist the reader's preferences whenever they change.
   useEffect(() => {
@@ -68,6 +71,13 @@ export default function MethodExplorer({ method, methodName, onMethodChange }: P
       // ignore write failures (private mode, quota, etc.)
     }
   }, [showAllBells])
+  useEffect(() => {
+    try {
+      localStorage.setItem(SHOW_COURSING_KEY, showCoursing ? '1' : '0')
+    } catch {
+      // ignore write failures (private mode, quota, etc.)
+    }
+  }, [showCoursing])
 
   const { rows, leadLength, built, error } = useMemo(() => {
     try {
@@ -113,6 +123,13 @@ export default function MethodExplorer({ method, methodName, onMethodChange }: P
 
   // Keep the selected working bell in range when the stage changes.
   const wb = Math.min(workingBell, method.stage - 1)
+
+  // The working bell's course & after bells. Principles (Stedman, etc.) have no
+  // coursing order in this sense, so we don't offer it there.
+  const coursing = useMemo(
+    () => (method.classification === 'Principle' ? null : coursingBells(rows, leadLength, wb)),
+    [rows, leadLength, wb, method.classification],
+  )
 
   if (error) return <p className="feedback err">Could not build method: {error}</p>
 
@@ -188,7 +205,17 @@ export default function MethodExplorer({ method, methodName, onMethodChange }: P
                 {chars.map((bell, pos) => (
                   <span
                     key={pos}
-                    className={bell === 0 ? 'b-treble' : bell === wb ? 'b-work' : undefined}
+                    className={
+                      bell === 0
+                        ? 'b-treble'
+                        : bell === wb
+                          ? 'b-work'
+                          : coursing && bell === coursing.course
+                            ? 'b-course'
+                            : coursing && bell === coursing.after
+                              ? 'b-after'
+                              : undefined
+                    }
                   >
                     {bellToChar(bell)}
                   </span>
@@ -214,6 +241,11 @@ export default function MethodExplorer({ method, methodName, onMethodChange }: P
           leadLength={leadLength}
           otherBells={showAllBells}
           onToggleOtherBells={setShowAllBells}
+          courseBell={coursing?.course}
+          afterBell={coursing?.after}
+          coursingAvailable={!!coursing}
+          showCoursing={showCoursing}
+          onToggleCoursing={setShowCoursing}
         />
       )}
       </div>
