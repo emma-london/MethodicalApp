@@ -62,7 +62,8 @@ const SURPRISE_MINOR: SpliceSet = {
     'Cambridge Surprise Minor',
     'Ipswich Surprise Minor',
     'Norwich Surprise Minor',
-    'London Surprise Minor',
+    'Beverley Surprise Minor',
+	'Surfleet Surprise Minor',
   ],
 }
 
