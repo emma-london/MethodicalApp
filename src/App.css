@@ -468,9 +468,20 @@ body {
 /* Blueline */
 .blueline-wrap { overflow-x: auto; background: var(--surface); border-radius: 8px; padding: 12px; text-align: center; }
 .blueline-wrap svg { display: inline-block; }
-.legend { display: flex; gap: 16px; font-size: 0.8rem; margin-bottom: 10px; }
+.legend { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; font-size: 0.8rem; margin-bottom: 10px; }
 .legend span { display: inline-flex; align-items: center; gap: 6px; }
 .legend .legend-note { color: var(--text-muted); font-style: italic; }
+/* "Show all bells" toggle, pushed to the right end of the legend row. */
+.legend-toggle {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  cursor: pointer;
+  user-select: none;
+}
+.legend-toggle input { width: 16px; height: 16px; accent-color: var(--accent2); cursor: pointer; }
 .swatch { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
 
 /* Trainer — the control bar is fixed to the bottom of the viewport so the

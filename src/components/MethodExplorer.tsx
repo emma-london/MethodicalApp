@@ -20,6 +20,8 @@ type View = 'numbers' | 'blueline'
 // Remember the reader's text-size and vertical-zoom choices across sessions.
 const ROW_HEIGHT_KEY = 'methodical.explorer.rowHeight'
 const TEXT_SIZE_KEY = 'methodical.explorer.textSize'
+// Whether the blue line draws every other bell as a faint grey line.
+const SHOW_ALL_BELLS_KEY = 'methodical.explorer.showAllBells'
 // Once the reader has zoomed by gesture, we stop nagging them with the hint.
 const ZOOM_HINT_KEY = 'methodical.explorer.zoomHintSeen'
 
@@ -42,6 +44,7 @@ export default function MethodExplorer({ method, methodName, onMethodChange }: P
   const [rowHeight, setRowHeight] = useState(() => loadNumber(ROW_HEIGHT_KEY, 6)) // blue line vertical spacing (px); lower = squashed
   const [textSize, setTextSize] = useState(() => loadNumber(TEXT_SIZE_KEY, 18)) // numbers view font size (px)
   const [hintOn, setHintOn] = useState(() => loadNumber(ZOOM_HINT_KEY, 0) === 0) // show until first gesture
+  const [showAllBells, setShowAllBells] = useState(() => loadNumber(SHOW_ALL_BELLS_KEY, 0) === 1)
 
   // Persist the reader's preferences whenever they change.
   useEffect(() => {
@@ -58,6 +61,13 @@ export default function MethodExplorer({ method, methodName, onMethodChange }: P
       // ignore write failures (private mode, quota, etc.)
     }
   }, [textSize])
+  useEffect(() => {
+    try {
+      localStorage.setItem(SHOW_ALL_BELLS_KEY, showAllBells ? '1' : '0')
+    } catch {
+      // ignore write failures (private mode, quota, etc.)
+    }
+  }, [showAllBells])
 
   const { rows, leadLength, built, error } = useMemo(() => {
     try {
@@ -202,6 +212,8 @@ export default function MethodExplorer({ method, methodName, onMethodChange }: P
           workingBell={wb}
           rowHeight={rowHeight}
           leadLength={leadLength}
+          otherBells={showAllBells}
+          onToggleOtherBells={setShowAllBells}
         />
       )}
       </div>

@@ -12,6 +12,7 @@ interface Props {
   otherBells?: boolean // draw every other bell as a faint grey line behind
   markRowIndex?: number // draw a dashed horizontal marker at this row index
   hideLegend?: boolean // hide the legend (for compact example views)
+  onToggleOtherBells?: (show: boolean) => void // if set, show an "all bells" toggle in the legend
 }
 
 const PAD = 18
@@ -32,6 +33,7 @@ export default function Blueline({
   otherBells = false,
   markRowIndex,
   hideLegend = false,
+  onToggleOtherBells,
 }: Props) {
   const dy = rowHeight
   const wrapRef = useRef<HTMLDivElement>(null)
@@ -96,6 +98,16 @@ export default function Blueline({
           <span><i className="swatch" style={{ background: 'var(--treble)' }} /> Treble (1)</span>
           <span><i className="swatch" style={{ background: 'var(--workbell)' }} /> Working bell ({bellToChar(workingBell)})</span>
           {leadLength > 0 && <span className="legend-note">Labels = place bell at each lead end</span>}
+          {onToggleOtherBells && (
+            <label className="legend-toggle">
+              <input
+                type="checkbox"
+                checked={otherBells}
+                onChange={(e) => onToggleOtherBells(e.target.checked)}
+              />
+              Show all bells
+            </label>
+          )}
         </div>
       )}
       <svg width={width} height={height} role="img" aria-label="Blue line">
