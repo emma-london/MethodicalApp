@@ -192,6 +192,27 @@ export default function MethodExplorer({ method, methodName, onMethodChange }: P
       </p>
       <div className="zoom-surface">
       {view === 'numbers' ? (
+        <>
+        {coursing && (
+          <div className="legend legend--numbers">
+            {showCoursing && (
+              <>
+                <span><i className="swatch" style={{ background: 'var(--up-color)' }} /> Course ({bellToChar(coursing.course)})</span>
+                <span><i className="swatch" style={{ background: 'var(--down-color)' }} /> After ({bellToChar(coursing.after)})</span>
+              </>
+            )}
+            <span className="legend-toggles">
+              <label className="legend-toggle">
+                <input
+                  type="checkbox"
+                  checked={showCoursing}
+                  onChange={(e) => setShowCoursing(e.target.checked)}
+                />
+                Course Bells
+              </label>
+            </span>
+          </div>
+        )}
         <div className="rows-grid" style={{ fontSize: `${textSize}px` }}>
           {rows.map((row, i) => {
             const isLeadHead = i > 0 && i % leadLength === 0
@@ -210,9 +231,9 @@ export default function MethodExplorer({ method, methodName, onMethodChange }: P
                         ? 'b-treble'
                         : bell === wb
                           ? 'b-work'
-                          : coursing && bell === coursing.course
+                          : showCoursing && coursing && bell === coursing.course
                             ? 'b-course'
-                            : coursing && bell === coursing.after
+                            : showCoursing && coursing && bell === coursing.after
                               ? 'b-after'
                               : undefined
                     }
@@ -232,6 +253,7 @@ export default function MethodExplorer({ method, methodName, onMethodChange }: P
             )
           })}
         </div>
+        </>
       ) : (
         <Blueline
           rows={rows}
