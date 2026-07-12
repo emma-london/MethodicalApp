@@ -12,8 +12,10 @@ export interface SpliceSet {
   name: string
   /** Shared stage of every method in the set. */
   stage: number
-  /** Method names, each resolvable in METHODS. */
+  /** Method names, each resolvable in the method catalog. */
   methods: string[]
+  /** True for user-created sets (persisted in localStorage), absent for built-ins. */
+  custom?: boolean
 }
 
 // The famous group: all-the-work spliced, one lead of each of the eight standard

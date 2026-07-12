@@ -2,8 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Row, standardCalls, bellToChar } from 'ringing-lib-ts'
 import type { Method, CallDefinition } from 'ringing-lib-ts'
 import type { MethodDef } from '../data/methods'
-import { METHODS } from '../data/methods'
-import { SPLICE_SETS } from '../data/spliceSets'
+import { useMethodCatalog } from '../state/MethodCatalog'
+import { useSpliceSets } from '../state/spliceSetStore'
 import { buildMethod, generateLeads, placeBellName } from '../logic/course'
 import type { LeadMethod } from '../logic/course'
 import MethodPicker from './MethodPicker'
@@ -64,9 +64,15 @@ const EMPTY_SESSION: Session = {
 }
 
 export default function MethodTrainer({ method, methodName, onMethodChange }: Props) {
+  // Built-in + user-created spliced sets, and a resolver across all method tiers
+  // (standard / used / downloaded) so custom sets built from downloaded methods
+  // still resolve.
+  const { all: spliceSets } = useSpliceSets()
+  const { findMethod } = useMethodCatalog()
+
   const [mode, setMode] = useState<Mode>('plain')
   const [spliceMode, setSpliceMode] = useState(false)
-  const [spliceSetName, setSpliceSetName] = useState<string>(SPLICE_SETS[0]?.name ?? '')
+  const [spliceSetName, setSpliceSetName] = useState<string>(spliceSets[0]?.name ?? '')
   const [workingBell, setWorkingBell] = useState(1)
   const [seed, setSeed] = useState(0) // bump to restart
   const [index, setIndex] = useState(0)
@@ -75,7 +81,7 @@ export default function MethodTrainer({ method, methodName, onMethodChange }: Pr
   const currentRowRef = useRef<HTMLDivElement>(null)
   const moveRef = useRef<(m: Move) => void>(() => {})
 
-  const spliceSet = SPLICE_SETS.find((s) => s.name === spliceSetName) ?? SPLICE_SETS[0]
+  const spliceSet = spliceSets.find((s) => s.name === spliceSetName) ?? spliceSets[0]
   const usingSplice = spliceMode && !!spliceSet
   const effectiveStage = usingSplice ? spliceSet.stage : method.stage
   const wb = Math.min(workingBell, effectiveStage - 1)
@@ -99,7 +105,7 @@ export default function MethodTrainer({ method, methodName, onMethodChange }: Pr
     const withCalls = mode === 'touch'
     if (usingSplice) {
       return spliceSet.methods.flatMap((name) => {
-        const def = METHODS.find((mm) => mm.name === name)
+        const def = findMethod(name)
         if (!def) return []
         const m = buildMethod(def)
         return [{ method: m, calls: withCalls ? practiceCalls(name, safeStandardCalls(m)) : [], trebleLeadOffset: offsetFor(name) }]
@@ -107,7 +113,7 @@ export default function MethodTrainer({ method, methodName, onMethodChange }: Pr
     }
     const m = buildMethod(method)
     return [{ method: m, calls: withCalls ? practiceCalls(method.name, safeStandardCalls(m)) : [], trebleLeadOffset: offsetFor(method.name) }]
-  }, [usingSplice, spliceSet, method, mode])
+  }, [usingSplice, spliceSet, method, mode, findMethod])
 
   // (Re)build the session whenever the method/set, mode, or restart seed changes.
   useEffect(() => {
@@ -144,7 +150,10 @@ export default function MethodTrainer({ method, methodName, onMethodChange }: Pr
         const leadMethods = buildLeadMethods()
         if (leadMethods.length === 0) return prev
         const last = prev.rows[prev.rows.length - 1]
-        const b = generateLeads(leadMethods, last, EXTEND_LEADS, prev.rows.length - 1)
+        // The method of the final existing lead, so a same-method boundary isn't
+        // announced when we append the next batch.
+        const prevMethodName = prev.leadMethodAt.get(prev.rows.length - 1)
+        const b = generateLeads(leadMethods, last, EXTEND_LEADS, prev.rows.length - 1, prevMethodName)
         const mergeInto = <T,>(base: Map<number, T>, extra: Map<number, T>) => {
           const next = new Map(base)
           extra.forEach((v, k) => next.set(k, v))

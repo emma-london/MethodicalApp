@@ -1,13 +1,14 @@
 import { lazy, Suspense, useState } from 'react'
 import { STAGE_NAMES } from '../data/methods'
 import type { MethodDef } from '../data/methods'
-import { SPLICE_SETS } from '../data/spliceSets'
 import { useMethodCatalog } from '../state/MethodCatalog'
+import { useSpliceSets, removeSpliceSet } from '../state/spliceSetStore'
 import Dropdown from './Dropdown'
 
 // Lazy so the CCCBR loader (and its parser) split into their own chunk, fetched
 // only when a power user opens the browser — off the launch path.
 const MethodBrowser = lazy(() => import('./MethodBrowser'))
+const SpliceSetBuilder = lazy(() => import('./SpliceSetBuilder'))
 
 interface Props {
   methodName: string
@@ -35,6 +36,8 @@ export default function MethodPicker({
   // The picker shows the standard set plus any methods the ringer has used
   // before (tier 1 + 2); the full CCCBR library lives behind the browser.
   const { pickerMethods, stages, hasLoaded, remember } = useMethodCatalog()
+  // Built-in + user-created spliced sets.
+  const { all: spliceSets, builtIn: builtInSpliceSets } = useSpliceSets()
 
   // Open on the stage of the currently-selected method so it's already narrowed
   // and the current choice is visible.
@@ -43,6 +46,8 @@ export default function MethodPicker({
 
   // The method browser overlay (Add / Search the full CCCBR library).
   const [browser, setBrowser] = useState<null | 'add' | 'search'>(null)
+  // The spliced-group builder overlay.
+  const [buildingSplice, setBuildingSplice] = useState(false)
 
   const visible =
     stageFilter === 'all'
@@ -97,7 +102,26 @@ export default function MethodPicker({
       : []),
   ]
 
-  const splicedEnabled = !!onSpliceModeChange && SPLICE_SETS.length > 0
+  const splicedEnabled = !!onSpliceModeChange && spliceSets.length > 0
+
+  const selectedSpliceName = spliceSetName ?? spliceSets[0]?.name
+  const selectedSpliceSet = spliceSets.find((s) => s.name === selectedSpliceName)
+
+  const deleteSelectedSet = () => {
+    if (!selectedSpliceSet?.custom) return
+    removeSpliceSet(selectedSpliceSet.name)
+    // Fall back to the first built-in set now that the custom one is gone.
+    onSpliceSetChange?.(builtInSpliceSets[0]?.name ?? '')
+  }
+
+  // Bottom-of-list actions on the spliced-set dropdown: create a group, and
+  // (when a custom set is selected) delete it.
+  const spliceActions = [
+    { label: '+ New spliced group…', onSelect: () => setBuildingSplice(true) },
+    ...(selectedSpliceSet?.custom
+      ? [{ label: `🗑 Delete “${selectedSpliceSet.name}”`, onSelect: deleteSelectedSet }]
+      : []),
+  ]
 
   return (
     <>
@@ -126,9 +150,13 @@ export default function MethodPicker({
           <label htmlFor="splice-select">Spliced set</label>
           <Dropdown
             id="splice-select"
-            value={spliceSetName ?? SPLICE_SETS[0].name}
+            value={selectedSpliceName ?? ''}
             onChange={(v) => onSpliceSetChange?.(v)}
-            options={SPLICE_SETS.map((s) => ({ value: s.name, label: s.name }))}
+            options={spliceSets.map((s) => ({
+              value: s.name,
+              label: s.custom ? `${s.name} ★` : s.name,
+            }))}
+            actions={spliceActions}
           />
         </div>
       ) : (
@@ -166,6 +194,16 @@ export default function MethodPicker({
             initialStage={typeof stageFilter === 'number' ? stageFilter : currentStage}
             onPick={handleBrowserPick}
             onClose={() => setBrowser(null)}
+          />
+        </Suspense>
+      )}
+
+      {buildingSplice && (
+        <Suspense fallback={null}>
+          <SpliceSetBuilder
+            initialStage={selectedSpliceSet?.stage ?? (typeof stageFilter === 'number' ? stageFilter : currentStage)}
+            onCreated={(name) => onSpliceSetChange?.(name)}
+            onClose={() => setBuildingSplice(false)}
           />
         </Suspense>
       )}

@@ -46,8 +46,9 @@ export interface LeadBatch {
    */
   methodAt: Map<number, string>
   /**
-   * Absolute lead-head row index -> the method of the lead that just finished.
-   * Rendered beside the rows, like a call mark (spliced only).
+   * Absolute lead-head row index -> the method of the lead that *starts* at that
+   * lead head (the method just switched into). Rendered beside the rows, like a
+   * call mark (spliced only).
    */
   methodMarks: Map<number, string>
   /**
@@ -81,12 +82,15 @@ export interface LeadMethod {
  * This works from any lead head, so the trainer can extend a session forever by
  * calling it again from the previous `endRow`. Row indices in the returned maps
  * are absolute, offset by `absOffset` (the index of `startRow` in the full list).
+ * `prevMethodName` is the method of the lead immediately before `startRow` (if
+ * any), so a batch boundary that stays in the same method isn't announced.
  */
 export function generateLeads(
   methods: LeadMethod[],
   startRow: Row,
   numLeads: number,
   absOffset: number,
+  prevMethodName?: string,
 ): LeadBatch {
   const spliced = methods.length > 1
 
@@ -99,18 +103,22 @@ export function generateLeads(
   let row = startRow
   // Absolute index of the last row emitted so far (startRow sits at absOffset).
   let abs = absOffset
+  // The method of the lead before this one, to detect an actual method change.
+  let prevName = prevMethodName
 
   for (let l = 0; l < numLeads; l++) {
     const lm = methods[Math.floor(Math.random() * methods.length)]
     const { method, calls, trebleLeadOffset } = lm
     const leadStartAbs = abs // this lead's rows run (leadStartAbs, leadHeadAbs]
 
-    // Announce the upcoming method across the lead-end transition (spliced only).
-    if (spliced) {
+    // Announce the upcoming method across the lead-end transition — but only when
+    // the method actually changes (staying in the same method needs no banner).
+    if (spliced && method.name !== prevName) {
       for (let r = Math.max(0, leadStartAbs - 1); r <= leadStartAbs + 1; r++) {
         methodAt.set(r, method.name)
       }
     }
+    prevName = method.name
 
     const changes = [...method] // the plain lead's changes
     const callBySymbol = new Map(calls.map((c) => [c.symbol, c]))
@@ -133,7 +141,10 @@ export function generateLeads(
     }
 
     const leadHeadAbs = abs // == leadStartAbs + method.leadLength
-    if (spliced) methodMarks.set(leadHeadAbs, method.name)
+    // Mark the lead head where this lead *begins* with this lead's method, so the
+    // label names the method you switch *into* (matching the place-bell circle and
+    // the announce banner) rather than the one that just finished.
+    if (spliced) methodMarks.set(leadStartAbs, method.name)
 
     if (call) {
       callMarks.set(leadHeadAbs, call.name)

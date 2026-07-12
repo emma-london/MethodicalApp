@@ -126,8 +126,30 @@ call banner coexist rather than replace each other.
 - The per-method `trebleLeadOffset` (the Grandsire special-case) is carried on
   each `LeadMethod`; the standard spliced sets are all offset 0.
 
+## Custom groups (implemented)
+
+Beyond the curated presets, the ringer can build their own group. The spliced-set
+dropdown carries bottom-of-list actions in the same style as the method
+dropdown's "+ Add methods from CCCBR…": **"+ New spliced group…"** (always) and
+**"🗑 Delete …"** (when the selected set is a custom one).
+
+"New spliced group…" opens a builder overlay (`SpliceSetBuilder`, styled like the
+CCCBR method browser) where the ringer names the group, picks a stage, and ticks
+the methods to splice. The method list is the catalog's `pickerMethods` — the
+standard set plus anything the ringer has used or downloaded — filtered to the
+chosen stage, so downloaded methods are eligible. A set needs a unique name and
+at least two methods.
+
+Custom sets persist in `localStorage` (`methodical.spliceSets.v1`) via a small
+module store (`state/spliceSetStore.ts`) exposed through `useSpliceSets()`, which
+merges built-in and custom sets and keeps the picker and trainer in sync via
+`useSyncExternalStore` — the same persistence pattern as the "used methods" tier,
+without adding another context provider. Because a custom set may reference a
+downloaded method, the trainer resolves members through the catalog's
+`findMethod` (all tiers) rather than the bundled `METHODS` list.
+
 ## Future work
 
-- Custom same-stage multi-select in the picker.
 - "Quiz me" mode: hide the current method and test recognition.
 - Fixed rotation and real-composition sequencing as alternatives to random.
+- Editing an existing custom group (currently: delete and recreate).
