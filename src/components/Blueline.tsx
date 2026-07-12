@@ -118,7 +118,7 @@ export default function Blueline({
             points={toPoints(path)}
             fill="none"
             stroke="var(--text-muted)"
-            strokeWidth={1.5}
+            strokeWidth={1.25}
             strokeOpacity={0.45}
             strokeLinejoin="round"
             strokeLinecap="round"
@@ -140,7 +140,7 @@ export default function Blueline({
           points={toPoints(treble)}
           fill="none"
           stroke="var(--treble)"
-          strokeWidth={2.5}
+          strokeWidth={1.75}
           strokeLinejoin="round"
           strokeLinecap="round"
         />
@@ -148,7 +148,7 @@ export default function Blueline({
           points={toPoints(work)}
           fill="none"
           stroke="var(--workbell)"
-          strokeWidth={3}
+          strokeWidth={2}
           strokeLinejoin="round"
           strokeLinecap="round"
         />
