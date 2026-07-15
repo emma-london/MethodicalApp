@@ -364,14 +364,17 @@ export default function MethodTrainer({ method, methodName, onMethodChange }: Pr
             <div className="feedback">Move your bell to the next row.</div>
           )}
 
+          {/* Fire on pointer-down (press), not click (release), so the row
+              advances the instant a button is touched — no wait for the browser
+              to resolve the tap. Keyboard users ring with the V/B/N shortcuts. */}
           <div className="move-buttons">
-            <button className="down" onClick={() => handleMove(-1)}>
+            <button className="down" onPointerDown={() => handleMove(-1)}>
               <span className="sym">◀</span> Down <kbd>V</kbd>
             </button>
-            <button className="stay" onClick={() => handleMove(0)}>
+            <button className="stay" onPointerDown={() => handleMove(0)}>
               <span className="sym">■</span> Place <kbd>B</kbd>
             </button>
-            <button className="up" onClick={() => handleMove(1)}>
+            <button className="up" onPointerDown={() => handleMove(1)}>
               Up <span className="sym">▶</span> <kbd>N</kbd>
             </button>
           </div>
