@@ -636,6 +636,12 @@ body {
   align-items: center;
   justify-content: center;
   gap: 8px;
+  /* Respond to taps immediately: no browser double-tap-zoom wait (the ~300ms
+     delay that showed up when switching between buttons), no tap-flash, and no
+     text selection from rapid presses. */
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
 }
 .move-buttons button:active { transform: translateY(1px); }
 .move-buttons .sym { font-size: 1.2rem; line-height: 1; }
