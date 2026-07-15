@@ -80,6 +80,13 @@ export default function MethodTrainer({ method, methodName, onMethodChange }: Pr
   const [error, setError] = useState<string | null>(null)
   const currentRowRef = useRef<HTMLDivElement>(null)
   const moveRef = useRef<(m: Move) => void>(() => {})
+  // Latest state, read by handleMove so a press is always judged against the
+  // current row — never a stale render closure. indexRef advances synchronously
+  // on each move so rapid presses chain instead of colliding (which was dropping
+  // roughly one press in twenty).
+  const indexRef = useRef(0)
+  const rowsRef = useRef<Row[]>([])
+  const wbRef = useRef(0)
 
   const spliceSet = spliceSets.find((s) => s.name === spliceSetName) ?? spliceSets[0]
   const usingSplice = spliceMode && !!spliceSet
@@ -196,10 +203,11 @@ export default function MethodTrainer({ method, methodName, onMethodChange }: Pr
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
-  const requiredMove: Move | null =
-    index + 1 < rows.length
-      ? (Math.sign(rows[index + 1].toArray().indexOf(wb) - rows[index].toArray().indexOf(wb)) as Move)
-      : null
+  // Keep indexRef in step with the committed index (e.g. after a restart or
+  // rebuild); handleMove otherwise advances it synchronously as you ring.
+  useEffect(() => {
+    indexRef.current = index
+  }, [index])
 
   const currentCall = callsAt.get(index) ?? null
   const currentMethodBanner = usingSplice ? (methodAt.get(index) ?? null) : null
@@ -207,20 +215,31 @@ export default function MethodTrainer({ method, methodName, onMethodChange }: Pr
     ? (leadMethodAt.get(index) ?? methodAt.get(index) ?? '…')
     : method.name
 
+  // Latest state for the move handler (avoids stale render closures).
+  rowsRef.current = rows
+  wbRef.current = wb
+
   const handleMove = (move: Move) => {
-    if (requiredMove === null) return
-    if (move === requiredMove) {
-      const next = index + 1
-      setIndex(next)
-      if (next >= rows.length - EXTEND_BUFFER) extend()
-      setFeedback(
-        rows[next].isRounds()
-          ? { kind: 'done', msg: '🎉 Rounds! Keep going…' }
-          : { kind: 'ok', msg: 'Correct — next row.' },
-      )
-    } else {
+    const rs = rowsRef.current
+    const cur = indexRef.current
+    const bell = wbRef.current
+    if (cur + 1 >= rs.length) return // no next row yet
+    const required = Math.sign(
+      rs[cur + 1].toArray().indexOf(bell) - rs[cur].toArray().indexOf(bell),
+    ) as Move
+    if (move !== required) {
       setFeedback({ kind: 'err', msg: 'Not quite — try again. Watch where your bell needs to go.' })
+      return
     }
+    const next = cur + 1
+    indexRef.current = next // advance synchronously so quick presses can't collide
+    setIndex(next)
+    if (next >= rs.length - EXTEND_BUFFER) extend()
+    setFeedback(
+      rs[next].isRounds()
+        ? { kind: 'done', msg: '🎉 Rounds! Keep going…' }
+        : { kind: 'ok', msg: 'Correct — next row.' },
+    )
   }
   // Keep the keyboard handler pointing at the current closure.
   moveRef.current = handleMove
