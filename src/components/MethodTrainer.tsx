@@ -173,10 +173,9 @@ export default function MethodTrainer({ method, methodName, onMethodChange }: Pr
     })
   }, [buildLeadMethods])
 
-  // Keep the current row in view (centred above the sticky control bar).
-  useEffect(() => {
-    currentRowRef.current?.scrollIntoView({ block: 'center', behavior: 'auto' })
-  }, [index, rows])
+  // The rows area is a fixed, non-scrolling region anchored to the bottom (see
+  // CSS), so the newest row always sits just above the buttons — no scrolling
+  // needed, which keeps the header in place and stops taps being read as scrolls.
 
   // Keyboard shortcuts: V = Down, B = Place, N = Up.
   useEffect(() => {

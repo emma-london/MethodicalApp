@@ -18,7 +18,7 @@ function AppInner() {
   const method = findMethod(methodName) ?? pickerMethods[0]
 
   return (
-    <div className="app">
+    <div className={tab === 'trainer' ? 'app app--trainer' : 'app'}>
       <header className="app-header">
         <div className="app-header__titles">
           <h1>Methodical</h1>
