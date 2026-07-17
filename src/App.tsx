@@ -1,17 +1,18 @@
 import './App.css'
 import MethodExplorer from './components/MethodExplorer'
 import MethodTrainer from './components/MethodTrainer'
+import Pinboard from './components/Pinboard'
 import InstallHint from './components/InstallHint'
 import InstallButton from './components/InstallButton'
 import { MethodCatalogProvider, useMethodCatalog } from './state/MethodCatalog'
 import { usePersistentState } from './hooks/usePersistentState'
 
-type Tab = 'explorer' | 'trainer'
+type Tab = 'explorer' | 'trainer' | 'pinboard'
 
 function AppInner() {
   const { findMethod, pickerMethods } = useMethodCatalog()
   const [tab, setTab] = usePersistentState<Tab>('methodical.tab', 'explorer', (r) =>
-    r === 'explorer' || r === 'trainer' ? r : undefined,
+    r === 'explorer' || r === 'trainer' || r === 'pinboard' ? r : undefined,
   )
   const [methodName, setMethodName] = usePersistentState<string>(
     'methodical.method',
@@ -50,6 +51,14 @@ function AppInner() {
         >
           Method Trainer
         </button>
+        <button
+          role="tab"
+          aria-selected={tab === 'pinboard'}
+          className={tab === 'pinboard' ? 'tab tab--active' : 'tab'}
+          onClick={() => setTab('pinboard')}
+        >
+          Pinboard
+        </button>
       </nav>
 
       <InstallHint />
@@ -57,8 +66,10 @@ function AppInner() {
       <main className="content">
         {tab === 'explorer' ? (
           <MethodExplorer method={method} methodName={methodName} onMethodChange={setMethodName} />
-        ) : (
+        ) : tab === 'trainer' ? (
           <MethodTrainer method={method} methodName={methodName} onMethodChange={setMethodName} />
+        ) : (
+          <Pinboard method={method} methodName={methodName} onMethodChange={setMethodName} />
         )}
       </main>
 

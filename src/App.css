@@ -664,3 +664,120 @@ body {
 .feedback.ok { background: color-mix(in srgb, var(--up-color) 18%, var(--surface)); color: var(--up-color); }
 .feedback.err { background: color-mix(in srgb, var(--accent) 18%, var(--surface)); color: var(--accent); }
 .feedback.done { background: color-mix(in srgb, var(--accent2) 20%, var(--surface)); color: var(--accent2); font-weight: 700; }
+
+/* ── Pinboard ─────────────────────────────────────────────────────────── */
+.pin-palette {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.pin-chip {
+  position: relative;
+  min-width: 40px;
+  height: 40px;
+  padding: 0 8px;
+  border-radius: 10px;
+  border: 2px solid color-mix(in srgb, var(--chip) 55%, transparent);
+  background: color-mix(in srgb, var(--chip) 14%, var(--surface));
+  color: var(--chip);
+  font-weight: 700;
+  font-size: 1.1rem;
+  cursor: default;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: box-shadow 0.08s ease;
+}
+.pin-chip.is-active {
+  border-color: var(--chip);
+  background: color-mix(in srgb, var(--chip) 28%, var(--surface));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--chip) 40%, transparent);
+}
+.pin-chip.is-done { border-style: solid; }
+.pin-chip__tick {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: var(--up-color);
+  color: var(--bg);
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  font-size: 0.7rem;
+  line-height: 16px;
+  text-align: center;
+}
+
+.pin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 8px;
+}
+.pin-btn {
+  background: var(--surface2);
+  color: var(--text);
+  border: 1px solid var(--surface2);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.pin-btn:hover { background: color-mix(in srgb, var(--accent2) 20%, var(--surface2)); }
+
+.pin-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  border: 1px solid transparent;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.pin-status__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
+}
+.pin-status--ok {
+  color: var(--up-color);
+  background: color-mix(in srgb, var(--up-color) 14%, var(--surface));
+  border-color: color-mix(in srgb, var(--up-color) 35%, transparent);
+}
+.pin-status--blocked {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 20%, var(--surface));
+  border-color: var(--accent);
+  animation: pin-status-pulse 0.25s ease;
+}
+@keyframes pin-status-pulse {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.015); }
+  100% { transform: scale(1); }
+}
+
+/* the refused-pin pulse on the grid */
+.pin-flash { animation: pin-flash-pulse 0.26s ease-out; transform-origin: center; transform-box: fill-box; }
+@keyframes pin-flash-pulse {
+  0% { opacity: 1; transform: scale(0.6); }
+  100% { opacity: 0; transform: scale(1.6); }
+}
+
+.pin-surface {
+  overflow: auto;
+  border: 1px solid var(--surface2);
+  border-radius: 10px;
+  background: var(--surface);
+  max-height: 70vh;
+}
+.pin-svg {
+  display: block;
+  touch-action: none; /* pointer drags draw, they don't scroll/zoom the page */
+}
