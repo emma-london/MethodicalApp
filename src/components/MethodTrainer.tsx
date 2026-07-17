@@ -64,6 +64,64 @@ const EMPTY_SESSION: Session = {
   leadMethodAt: new Map(),
 }
 
+// Persisted trainer progress: the generated rows (each as a place string),
+// where the ringer is up to, and a signature of the setup it was built for so a
+// saved Cambridge session isn't restored onto Plain Bob. Rows carry the random
+// calls of a touch/spliced session, so we store them verbatim rather than trying
+// to regenerate.
+const SESSION_KEY = 'methodical.trainer.session'
+const SESSION_VERSION = 1
+
+interface StoredSession {
+  v: number
+  sig: string
+  index: number
+  rows: string[]
+  callsAt: [number, string][]
+  callMarks: [number, string][]
+  methodAt: [number, string][]
+  methodMarks: [number, string][]
+  leadMethodAt: [number, string][]
+}
+
+function serializeSession(sig: string, index: number, s: Session): string {
+  const payload: StoredSession = {
+    v: SESSION_VERSION,
+    sig,
+    index,
+    rows: s.rows.map((r) => r.toString()),
+    callsAt: [...s.callsAt],
+    callMarks: [...s.callMarks],
+    methodAt: [...s.methodAt],
+    methodMarks: [...s.methodMarks],
+    leadMethodAt: [...s.leadMethodAt],
+  }
+  return JSON.stringify(payload)
+}
+
+function loadStoredSession(): StoredSession | null {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY)
+    if (!raw) return null
+    const p = JSON.parse(raw) as StoredSession
+    if (p?.v !== SESSION_VERSION || !Array.isArray(p.rows) || p.rows.length === 0) return null
+    return p
+  } catch {
+    return null
+  }
+}
+
+function deserializeSession(p: StoredSession): Session {
+  return {
+    rows: p.rows.map((s) => Row.parse(s)),
+    callsAt: new Map(p.callsAt),
+    callMarks: new Map(p.callMarks),
+    methodAt: new Map(p.methodAt),
+    methodMarks: new Map(p.methodMarks),
+    leadMethodAt: new Map(p.leadMethodAt),
+  }
+}
+
 export default function MethodTrainer({ method, methodName, onMethodChange }: Props) {
   // Built-in + user-created spliced sets, and a resolver across all method tiers
   // (standard / used / downloaded) so custom sets built from downloaded methods
@@ -101,6 +159,14 @@ export default function MethodTrainer({ method, methodName, onMethodChange }: Pr
   const effectiveStage = usingSplice ? spliceSet.stage : method.stage
   const wb = Math.min(workingBell, effectiveStage - 1)
 
+  // Identifies the setup a saved session belongs to (method/set + plain vs touch),
+  // so we only resume progress into a matching session. Note the working bell is
+  // deliberately excluded — the rows are the same whichever bell you follow.
+  const sessionSig = usingSplice
+    ? `splice:${spliceSet?.name}:${mode}:${effectiveStage}`
+    : `single:${method.name}|${method.notation}|${method.stage}:${mode}`
+  const didRestoreRef = useRef(false)
+
   // Lead length for the single-method case, used to locate lead heads (where a
   // place bell is shown). Spliced sessions locate lead heads via methodMarks.
   const singleLeadLength = useMemo(() => {
@@ -130,8 +196,25 @@ export default function MethodTrainer({ method, methodName, onMethodChange }: Pr
     return [{ method: m, calls: withCalls ? practiceCalls(method.name, safeStandardCalls(m)) : [], trebleLeadOffset: offsetFor(method.name) }]
   }, [usingSplice, spliceSet, method, mode, findMethod])
 
-  // (Re)build the session whenever the method/set, mode, or restart seed changes.
+  // (Re)build the session whenever the method/set, mode, or restart seed changes —
+  // except on first mount, where we resume a saved session for the same setup.
   useEffect(() => {
+    if (!didRestoreRef.current) {
+      didRestoreRef.current = true
+      const stored = loadStoredSession()
+      if (stored && stored.sig === sessionSig) {
+        try {
+          const restored = deserializeSession(stored)
+          setSession(restored)
+          setIndex(Math.min(Math.max(stored.index, 0), restored.rows.length - 1))
+          setError(null)
+          setFeedback(null)
+          return // resumed — don't build a fresh session
+        } catch {
+          // corrupt/unparseable — fall through to a fresh build
+        }
+      }
+    }
     try {
       const leadMethods = buildLeadMethods()
       if (leadMethods.length === 0) throw new Error('No methods available')
@@ -154,6 +237,17 @@ export default function MethodTrainer({ method, methodName, onMethodChange }: Pr
     setFeedback(null)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [buildLeadMethods, seed])
+
+  // Persist progress (rows + position) so a session resumes after a reload. Skip
+  // the empty session so we never clobber saved progress before the build runs.
+  useEffect(() => {
+    if (session.rows.length === 0) return
+    try {
+      localStorage.setItem(SESSION_KEY, serializeSession(sessionSig, index, session))
+    } catch {
+      // ignore write failures (private mode, quota, etc.)
+    }
+  }, [session, index, sessionSig])
 
   const { rows, callsAt, callMarks, methodAt, methodMarks, leadMethodAt } = session
 
