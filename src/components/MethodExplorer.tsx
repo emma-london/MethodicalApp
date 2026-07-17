@@ -8,6 +8,7 @@ import Blueline from './Blueline'
 import CallExamples from './CallExamples'
 import Dropdown from './Dropdown'
 import { usePinchZoom } from '../hooks/usePinchZoom'
+import { usePersistentState, asInt } from '../hooks/usePersistentState'
 
 interface Props {
   method: MethodDef
@@ -42,7 +43,8 @@ function loadNumber(key: string, fallback: number): number {
 
 export default function MethodExplorer({ method, methodName, onMethodChange }: Props) {
   const [view, setView] = useState<View>('numbers')
-  const [workingBell, setWorkingBell] = useState(1) // 0-based; default the "2"
+  // 0-based; default the "2". Shared with the trainer so "your bell" carries over.
+  const [workingBell, setWorkingBell] = usePersistentState('methodical.workingBell', 1, asInt)
   const [rowHeight, setRowHeight] = useState(() => loadNumber(ROW_HEIGHT_KEY, 6)) // blue line vertical spacing (px); lower = squashed
   const [textSize, setTextSize] = useState(() => loadNumber(TEXT_SIZE_KEY, 18)) // numbers view font size (px)
   const [hintOn, setHintOn] = useState(() => loadNumber(ZOOM_HINT_KEY, 0) === 0) // show until first gesture

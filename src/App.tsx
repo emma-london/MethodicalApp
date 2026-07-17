@@ -1,17 +1,23 @@
-import { useState } from 'react'
 import './App.css'
 import MethodExplorer from './components/MethodExplorer'
 import MethodTrainer from './components/MethodTrainer'
 import InstallHint from './components/InstallHint'
 import InstallButton from './components/InstallButton'
 import { MethodCatalogProvider, useMethodCatalog } from './state/MethodCatalog'
+import { usePersistentState } from './hooks/usePersistentState'
 
 type Tab = 'explorer' | 'trainer'
 
 function AppInner() {
   const { findMethod, pickerMethods } = useMethodCatalog()
-  const [tab, setTab] = useState<Tab>('explorer')
-  const [methodName, setMethodName] = useState<string>('Grandsire Triples')
+  const [tab, setTab] = usePersistentState<Tab>('methodical.tab', 'explorer', (r) =>
+    r === 'explorer' || r === 'trainer' ? r : undefined,
+  )
+  const [methodName, setMethodName] = usePersistentState<string>(
+    'methodical.method',
+    'Grandsire Triples',
+    (r) => r || undefined,
+  )
 
   // Resolve the selected method across all tiers (standard, used, loaded); fall
   // back to the first picker method if the name can't be resolved.

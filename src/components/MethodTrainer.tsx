@@ -8,6 +8,7 @@ import { buildMethod, generateLeads, placeBellName } from '../logic/course'
 import type { LeadMethod } from '../logic/course'
 import MethodPicker from './MethodPicker'
 import Dropdown from './Dropdown'
+import { usePersistentState, asInt } from '../hooks/usePersistentState'
 
 interface Props {
   method: MethodDef
@@ -70,10 +71,17 @@ export default function MethodTrainer({ method, methodName, onMethodChange }: Pr
   const { all: spliceSets } = useSpliceSets()
   const { findMethod } = useMethodCatalog()
 
-  const [mode, setMode] = useState<Mode>('plain')
-  const [spliceMode, setSpliceMode] = useState(false)
+  const [mode, setMode] = usePersistentState<Mode>('methodical.trainer.mode', 'plain', (r) =>
+    r === 'plain' || r === 'touch' ? r : undefined,
+  )
+  const [spliceMode, setSpliceMode] = usePersistentState<boolean>(
+    'methodical.trainer.spliceMode',
+    false,
+    (r) => (r === 'true' ? true : r === 'false' ? false : undefined),
+  )
   const [spliceSetName, setSpliceSetName] = useState<string>(spliceSets[0]?.name ?? '')
-  const [workingBell, setWorkingBell] = useState(1)
+  // Shared with the explorer so "your bell" carries over.
+  const [workingBell, setWorkingBell] = usePersistentState('methodical.workingBell', 1, asInt)
   const [seed, setSeed] = useState(0) // bump to restart
   const [index, setIndex] = useState(0)
   const [feedback, setFeedback] = useState<{ kind: 'ok' | 'err' | 'done'; msg: string } | null>(null)
@@ -184,15 +192,15 @@ export default function MethodTrainer({ method, methodName, onMethodChange }: Pr
   // CSS), so the newest row always sits just above the buttons — no scrolling
   // needed, which keeps the header in place and stops taps being read as scrolls.
 
-  // Keyboard shortcuts: V = Down, B = Place, N = Up.
+  // Keyboard shortcuts: ← = Down, ↓ = Place, → = Up.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null
       if (t && /^(INPUT|SELECT|TEXTAREA)$/.test(t.tagName)) return
       if (e.metaKey || e.ctrlKey || e.altKey || e.repeat) return
-      const move: Move | null = e.key === 'v' || e.key === 'V' ? -1
-        : e.key === 'b' || e.key === 'B' ? 0
-        : e.key === 'n' || e.key === 'N' ? 1
+      const move: Move | null = e.key === 'ArrowLeft' ? -1
+        : e.key === 'ArrowDown' ? 0
+        : e.key === 'ArrowRight' ? 1
         : null
       if (move !== null) {
         e.preventDefault()
@@ -366,16 +374,16 @@ export default function MethodTrainer({ method, methodName, onMethodChange }: Pr
 
           {/* Fire on pointer-down (press), not click (release), so the row
               advances the instant a button is touched — no wait for the browser
-              to resolve the tap. Keyboard users ring with the V/B/N shortcuts. */}
+              to resolve the tap. Keyboard users ring with the arrow keys. */}
           <div className="move-buttons">
             <button className="down" onPointerDown={() => handleMove(-1)}>
-              <span className="sym">◀</span> Down <kbd>V</kbd>
+              <span className="sym">◀</span> Faster <kbd>←</kbd>
             </button>
             <button className="stay" onPointerDown={() => handleMove(0)}>
-              <span className="sym">■</span> Place <kbd>B</kbd>
+              <span className="sym">■</span> Place <kbd>↓</kbd>
             </button>
             <button className="up" onPointerDown={() => handleMove(1)}>
-              Up <span className="sym">▶</span> <kbd>N</kbd>
+              Slower <span className="sym">▶</span> <kbd>→</kbd>
             </button>
           </div>
         </div>

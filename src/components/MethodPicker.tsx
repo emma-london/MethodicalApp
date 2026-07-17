@@ -4,6 +4,7 @@ import type { MethodDef } from '../data/methods'
 import { useMethodCatalog } from '../state/MethodCatalog'
 import { useSpliceSets, removeSpliceSet } from '../state/spliceSetStore'
 import Dropdown from './Dropdown'
+import { usePersistentState } from '../hooks/usePersistentState'
 
 // Lazy so the CCCBR loader (and its parser) split into their own chunk, fetched
 // only when a power user opens the browser — off the launch path.
@@ -42,7 +43,11 @@ export default function MethodPicker({
   // Open on the stage of the currently-selected method so it's already narrowed
   // and the current choice is visible.
   const currentStage = pickerMethods.find((m) => m.name === methodName)?.stage
-  const [stageFilter, setStageFilter] = useState<StageFilter>(currentStage ?? 'all')
+  const [stageFilter, setStageFilter] = usePersistentState<StageFilter>(
+    'methodical.picker.stage',
+    currentStage ?? 'all',
+    (r) => (r === 'all' ? 'all' : Number.isInteger(Number(r)) ? Number(r) : undefined),
+  )
 
   // The method browser overlay (Add / Search the full CCCBR library).
   const [browser, setBrowser] = useState<null | 'add' | 'search'>(null)
