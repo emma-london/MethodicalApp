@@ -41,7 +41,7 @@ function AppInner() {
           className={tab === 'explorer' ? 'tab tab--active' : 'tab'}
           onClick={() => setTab('explorer')}
         >
-          Method Explorer
+          Explorer
         </button>
         <button
           role="tab"
@@ -49,7 +49,7 @@ function AppInner() {
           className={tab === 'trainer' ? 'tab tab--active' : 'tab'}
           onClick={() => setTab('trainer')}
         >
-          Method Trainer
+          Trainer
         </button>
         <button
           role="tab"

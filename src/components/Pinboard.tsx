@@ -61,14 +61,11 @@ export default function Pinboard({ method, methodName, onMethodChange }: Props) 
   const [activeBell, setActiveBell] = useState<number | null>(null)
   const [rowGap, setRowGap] = useState(22) // vertical px per row
   const [showAnswer, setShowAnswer] = useState(false)
-  // Status indicator above the grid: green when idle, pulses red on a blocked move.
-  const [status, setStatus] = useState<'ok' | 'blocked'>('ok')
   // A transient red pulse on the pin the user was refused.
   const [flash, setFlash] = useState<{ row: number; place: number; key: number } | null>(null)
 
   const wrapRef = useRef<HTMLDivElement>(null)
   const svgRef = useRef<SVGSVGElement>(null)
-  const statusTimer = useRef<number | null>(null)
   const flashTimer = useRef<number | null>(null)
   // Live stroke state, held in a ref so pointer moves don't need re-renders to
   // read the last point.
@@ -127,11 +124,8 @@ export default function Pinboard({ method, methodName, onMethodChange }: Props) 
   const rowFromY = (y: number) => clamp(Math.round((y - PAD) / rowGap), 0, numRows - 1)
   const placeFromX = (x: number) => clamp(Math.round((x - OX) / dx), 0, stage - 1)
 
-  // Refuse a move: pulse the status indicator red and flash the offending pin.
+  // Refuse a move: flash the offending pin red.
   const reject = (row: number, pl: number) => {
-    setStatus('blocked')
-    if (statusTimer.current) window.clearTimeout(statusTimer.current)
-    statusTimer.current = window.setTimeout(() => setStatus('ok'), 700)
     setFlash({ row, place: pl, key: Date.now() })
     if (flashTimer.current) window.clearTimeout(flashTimer.current)
     flashTimer.current = window.setTimeout(() => setFlash(null), 260)
@@ -264,13 +258,6 @@ export default function Pinboard({ method, methodName, onMethodChange }: Props) 
           Clear {activeBell != null ? bellToChar(activeBell) : 'bell'}
         </button>
         <button className="pin-btn" onClick={clearAll}>Clear all</button>
-      </div>
-
-      <div className={`pin-status pin-status--${status}`} role="status" aria-live="polite">
-        <span className="pin-status__dot" />
-        {status === 'ok'
-          ? 'Drag a bell down from the top — or from where you left off'
-          : 'That move isn’t allowed'}
       </div>
 
       <div className="pin-surface" ref={wrapRef}>
