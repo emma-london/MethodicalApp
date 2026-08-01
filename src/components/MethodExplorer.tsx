@@ -18,6 +18,8 @@ interface Props {
 
 type View = 'numbers' | 'blueline'
 
+// Remember which display (numbers vs blue line) the reader last chose.
+const VIEW_KEY = 'methodical.explorer.view'
 // Remember the reader's text-size and vertical-zoom choices across sessions.
 const ROW_HEIGHT_KEY = 'methodical.explorer.rowHeight'
 const TEXT_SIZE_KEY = 'methodical.explorer.textSize'
@@ -42,7 +44,9 @@ function loadNumber(key: string, fallback: number): number {
 }
 
 export default function MethodExplorer({ method, methodName, onMethodChange }: Props) {
-  const [view, setView] = useState<View>('numbers')
+  const [view, setView] = usePersistentState<View>(VIEW_KEY, 'numbers', (r) =>
+    r === 'numbers' || r === 'blueline' ? r : undefined,
+  )
   // 0-based; default the "2". Shared with the trainer so "your bell" carries over.
   const [workingBell, setWorkingBell] = usePersistentState('methodical.workingBell', 1, asInt)
   const [rowHeight, setRowHeight] = useState(() => loadNumber(ROW_HEIGHT_KEY, 6)) // blue line vertical spacing (px); lower = squashed
