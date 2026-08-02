@@ -157,3 +157,31 @@ so moving bundle→fetch doesn't regress offline use:
 5. **Automate the refresh+publish** as scheduled CI (monthly)? This is what turns
    "fresh data" from aspiration into something that stays true without anyone
    remembering to run it.
+
+## Note added 2026-08-02 — graceful offline failure + PWA interaction
+
+Context: the Methodical app now has a real service worker (vite-plugin-pwa,
+`registerType: 'autoUpdate'`) that precaches the app shell, so the app itself is
+genuinely offline-capable. That changes the requirements on this loader, because
+the loader is the *one* part of the app that reaches the network at runtime.
+
+Two things must be handled when this lands (uncommon path, but must be caught and
+handled well — not left to throw an unhandled rejection):
+
+1. **Fail gracefully when offline with no cached copy.** If a user taps "load full
+   library" while offline and no `CacheAdapter` copy exists yet, `loadMethodLibrary`
+   will reject (fetch fails). The app must catch this and show a calm, explanatory
+   state ("Full library needs a connection the first time — the ~45 standard
+   methods are available offline"), then fall back to `STANDARD_SET`. Never a blank
+   screen or a raw error. Consider surfacing a typed error from the loader (e.g.
+   `LoaderOfflineError`) so apps can distinguish "offline" from "genuinely broken."
+
+2. **Add a Workbox `runtimeCaching` rule for the hosted snapshot.** Precaching only
+   covers the build output; the fetched `manifest.json` + `stage-<n>.json` come
+   from the hosted URL and won't be cached by the service worker unless we add a
+   rule for them in `vite.config.ts` (there's a NOTE marker there pointing here).
+   A `StaleWhileRevalidate` or `CacheFirst` strategy keyed on the snapshot origin
+   means: once a stage has been fetched online, it survives offline via the SW
+   cache — complementing, or possibly replacing, layer 4's app-level
+   `CacheAdapter`. Decide whether the SW cache makes a separate IndexedDB adapter
+   redundant for the browser target.
