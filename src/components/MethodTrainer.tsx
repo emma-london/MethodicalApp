@@ -4,7 +4,7 @@ import type { Method, CallDefinition } from 'ringing-lib-ts'
 import type { MethodDef } from '../data/methods'
 import { useMethodCatalog } from '../state/MethodCatalog'
 import { useSpliceSets } from '../state/spliceSetStore'
-import { buildMethod, generateLeads, placeBellName } from '../logic/course'
+import { buildMethod, generateLeads, placeBellName, callAnnounceOffset } from '../logic/course'
 import type { LeadMethod } from '../logic/course'
 import MethodPicker from './MethodPicker'
 import Dropdown from './Dropdown'
@@ -32,9 +32,6 @@ const INITIAL_LEADS = 8
 const EXTEND_LEADS = 8
 // Append more leads once the current position is within this many rows of the end.
 const EXTEND_BUFFER = 40
-
-// Grandsire's call work starts two blows before the treble's first lead blow.
-const offsetFor = (name: string) => (/grandsire/i.test(name) ? 2 : 0)
 
 function safeStandardCalls(m: Method): CallDefinition[] {
   try {
@@ -145,6 +142,7 @@ export default function MethodTrainer({ method, methodName, onMethodChange }: Pr
   const [feedback, setFeedback] = useState<{ kind: 'ok' | 'err' | 'done'; msg: string } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const currentRowRef = useRef<HTMLDivElement>(null)
+  const rowsAreaRef = useRef<HTMLDivElement>(null)
   const moveRef = useRef<(m: Move) => void>(() => {})
   // Latest state, read by handleMove so a press is always judged against the
   // current row — never a stale render closure. indexRef advances synchronously
@@ -189,11 +187,11 @@ export default function MethodTrainer({ method, methodName, onMethodChange }: Pr
         const def = findMethod(name)
         if (!def) return []
         const m = buildMethod(def)
-        return [{ method: m, calls: withCalls ? practiceCalls(name, safeStandardCalls(m)) : [], trebleLeadOffset: offsetFor(name) }]
+        return [{ method: m, calls: withCalls ? practiceCalls(name, safeStandardCalls(m)) : [], trebleLeadOffset: callAnnounceOffset(name) }]
       })
     }
     const m = buildMethod(method)
-    return [{ method: m, calls: withCalls ? practiceCalls(method.name, safeStandardCalls(m)) : [], trebleLeadOffset: offsetFor(method.name) }]
+    return [{ method: m, calls: withCalls ? practiceCalls(method.name, safeStandardCalls(m)) : [], trebleLeadOffset: callAnnounceOffset(method.name) }]
   }, [usingSplice, spliceSet, method, mode, findMethod])
 
   // (Re)build the session whenever the method/set, mode, or restart seed changes —
@@ -282,9 +280,13 @@ export default function MethodTrainer({ method, methodName, onMethodChange }: Pr
     })
   }, [buildLeadMethods])
 
-  // The rows area is a fixed, non-scrolling region anchored to the bottom (see
-  // CSS), so the newest row always sits just above the buttons — no scrolling
-  // needed, which keeps the header in place and stops taps being read as scrolls.
+  // The rows area scrolls vertically so the whole revealed history is available
+  // to look back at. As the ringer advances we snap it back to the bottom (below)
+  // so the current row stays in view; between presses they're free to scroll up.
+  useEffect(() => {
+    const el = rowsAreaRef.current
+    if (el) el.scrollTop = el.scrollHeight
+  }, [index])
 
   // Keyboard shortcuts: ← = Down, ↓ = Place, → = Up.
   useEffect(() => {
@@ -350,8 +352,10 @@ export default function MethodTrainer({ method, methodName, onMethodChange }: Pr
 
   if (error) return <p className="feedback err">Could not build method: {error}</p>
 
-  // Show a trailing window of revealed rows.
-  const from = Math.max(0, index - 9)
+  // Reveal the full history up to the current row so it can be scrolled back
+  // through; the rows area (not the page) scrolls, and auto-snaps to the bottom
+  // as you ring.
+  const from = 0
   const revealed = rows.slice(from, index + 1)
 
   return (
@@ -397,7 +401,7 @@ export default function MethodTrainer({ method, methodName, onMethodChange }: Pr
         · {mode === 'touch' ? 'touch (endless)' : 'plain course (endless)'} · row {index + 1}
       </p>
 
-      <div className="trainer-rows-area">
+      <div className="trainer-rows-area" ref={rowsAreaRef}>
         <div className="trainer-rows">
           {revealed.map((row, i) => {
             const absolute = from + i

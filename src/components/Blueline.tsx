@@ -10,7 +10,9 @@ interface Props {
   rowHeight?: number // vertical spacing per row (px); lower = more squashed
   leadLength?: number // rows per lead; enables place-bell labels at lead heads
   otherBells?: boolean // draw every other bell as a faint grey line behind
-  markRowIndex?: number // draw a dashed horizontal marker at this row index
+  markRowIndex?: number // draw a dashed horizontal marker at this row index (lead end)
+  callRowIndex?: number // draw an accent marker where the call is announced ("called")
+  callLabel?: string // label shown on the call marker (e.g. "Bob" / "Single")
   hideLegend?: boolean // hide the legend (for compact example views)
   onToggleOtherBells?: (show: boolean) => void // if set, show an "all bells" toggle in the legend
   // Coursing: colour the working bell's course (green) & after (amber) bells.
@@ -38,6 +40,8 @@ export default function Blueline({
   leadLength = 0,
   otherBells = false,
   markRowIndex,
+  callRowIndex,
+  callLabel,
   hideLegend = false,
   onToggleOtherBells,
   courseBell,
@@ -52,8 +56,16 @@ export default function Blueline({
   const wrapRef = useRef<HTMLDivElement>(null)
   const [availW, setAvailW] = useState(0)
 
-  // x origin of 1st place. Place-bell circles live in a gutter on the right.
-  const OX = PAD
+  // A left gutter reserved for the call pill (Bob/Single), so it sits clear of
+  // the blue line rather than crowding it. Zero when there's no call label, so
+  // the main explorer blue line is unaffected. Sized to the label's width.
+  const CALL_FONT = 10
+  const callPillW = callLabel ? callLabel.length * CALL_FONT * 0.62 + 12 : 0
+  const LEFT_GUTTER = callPillW ? callPillW + 12 : 0
+
+  // x origin of 1st place. Place-bell circles live in a gutter on the right; the
+  // call pill (when present) lives in a gutter on the left.
+  const OX = PAD + LEFT_GUTTER
 
   // Measure the container so the blue line spreads across the available width.
   useEffect(() => {
@@ -69,7 +81,7 @@ export default function Blueline({
   // Column spacing: fill the width, but clamp so it never gets silly.
   const dx =
     availW > 0
-      ? Math.max(MIN_DX, Math.min(MAX_DX, (availW - PAD * 2 - PB_GUTTER) / Math.max(1, stage - 1)))
+      ? Math.max(MIN_DX, Math.min(MAX_DX, (availW - PAD * 2 - PB_GUTTER - LEFT_GUTTER) / Math.max(1, stage - 1)))
       : 26
 
   const { treble, work, others, coursePath, afterPath, width, height, placeBells } = useMemo(() => {
@@ -104,10 +116,10 @@ export default function Blueline({
       coursePath,
       afterPath,
       placeBells,
-      width: (stage - 1) * dx + PAD * 2 + PB_GUTTER,
+      width: (stage - 1) * dx + PAD * 2 + PB_GUTTER + LEFT_GUTTER,
       height: (rows.length - 1) * dy + PAD * 2,
     }
-  }, [rows, stage, workingBell, dx, dy, leadLength, OX, otherBells, coursingOn, courseBell, afterBell])
+  }, [rows, stage, workingBell, dx, dy, leadLength, OX, LEFT_GUTTER, otherBells, coursingOn, courseBell, afterBell])
 
   const toPoints = (path: number[]) =>
     path.map((place, i) => `${place * dx + OX},${i * dy + PAD}`).join(' ')
@@ -202,10 +214,34 @@ export default function Blueline({
             strokeLinecap="round"
           />
         )}
+        {/* Where the call is announced ("called"): a small pill in the left
+            gutter naming the call (Bob/Single), level with that row, mirroring
+            the numbers view. */}
+        {callRowIndex != null && callLabel && (() => {
+          const cy = callRowIndex * dy + PAD
+          const h = CALL_FONT + 6
+          const x = 2 // left gutter
+          return (
+            <g>
+              <rect x={x} y={cy - h / 2} width={callPillW} height={h} rx={4} fill="var(--accent)" />
+              <text
+                x={x + callPillW / 2}
+                y={cy}
+                fontSize={CALL_FONT}
+                fontWeight={700}
+                fill="var(--bg)"
+                textAnchor="middle"
+                dominantBaseline="central"
+              >
+                {callLabel}
+              </text>
+            </g>
+          )
+        })()}
         {/* dashed marker at the lead end (where the call takes effect) */}
         {markRowIndex != null && (
           <line
-            x1={PAD}
+            x1={OX}
             y1={markRowIndex * dy + PAD}
             x2={width - PAD}
             y2={markRowIndex * dy + PAD}

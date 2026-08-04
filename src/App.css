@@ -399,6 +399,27 @@ select, .btn {
 .rows-grid .b-course { color: var(--up-color); font-weight: 700; }
 .rows-grid .b-after { color: var(--down-color); font-weight: 700; }
 .rows-grid .lead-end { border-bottom: 1px dashed var(--text-muted); }
+/* Where the call is announced ("called") — a small pill naming the call
+   (Bob/Single) hugging the row's left. The lead-end dashed line (grey, below the
+   row where the call takes effect) marks the separate lead-end row. */
+.rows-grid .call-point-tag {
+  position: absolute;
+  right: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  margin-right: 10px;
+  font-family: system-ui, -apple-system, sans-serif;
+  letter-spacing: normal;
+  font-size: 0.58rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 5px;
+  background: var(--accent);
+  color: var(--bg);
+  white-space: nowrap;
+}
+/* Inline key in the panel note, coloured to match the accent marker line. */
+.call-marker-key { color: var(--accent); font-weight: 600; }
 
 /* Place bell at a lead head — the place the working bell reaches at the lead end,
    i.e. the place bell it rings for the next lead. Shown as the place number in a
@@ -501,25 +522,30 @@ body {
    The bottom padding reserves room so rows can scroll clear of the bar. */
 .trainer { flex: 1; display: flex; flex-direction: column; min-height: 0; padding-bottom: 184px; }
 
-/* The rows area is a fixed, clipped region that fills the space between the meta
-   line and the control bar. Rows are anchored to the bottom (justify-content:
-   flex-end) so the newest row sits just above the buttons; older rows scroll off
-   the top by being clipped, not by scrolling the page. */
+/* The rows area fills the space between the meta line and the control bar and
+   scrolls vertically so the whole revealed history can be looked back at. Rows
+   are anchored to the bottom (justify-content: flex-end) so the newest row sits
+   just above the buttons; as the ringer advances the area auto-snaps to the
+   bottom (see MethodTrainer), and between presses it can be scrolled up. */
 .trainer-rows-area {
   flex: 1;
   min-height: 0;
-  overflow: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
   background: var(--surface);
   border-radius: 10px;
   padding: 16px;
 }
 /* A centred flex column (like the explorer's .rows-grid) so each row is only as
    wide as its content — that keeps the left-hand call marks and the right-hand
-   place-bell circle hugging the row rather than the full container width. */
-.trainer-rows { display: flex; flex-direction: column; align-items: center; font-family: ui-monospace, monospace; font-size: clamp(16px, 5vw, 24px); line-height: 1.7; letter-spacing: 0.4em; text-align: center; }
+   place-bell circle hugging the row rather than the full container width.
+   margin-top:auto pins the rows to the bottom when they don't fill the area, but
+   collapses once they overflow so the top stays reachable when scrolling back
+   (avoids the flex-end scroll-clipping bug). */
+.trainer-rows { margin-top: auto; display: flex; flex-direction: column; align-items: center; font-family: ui-monospace, monospace; font-size: clamp(16px, 5vw, 24px); line-height: 1.7; letter-spacing: 0.4em; text-align: center; }
 .trainer-rows .row { position: relative; }
 .trainer-rows .row.current { background: var(--surface2); border-radius: 6px; }
 /* Lead-head marks (method name + any call) grouped on the left. The place bell

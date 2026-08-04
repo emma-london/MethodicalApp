@@ -52,11 +52,12 @@ export default function CallExamples({ method, stage, workingBell, view, rowHeig
       <h3 className="call-examples__title">Bobs &amp; Singles</h3>
       <p className="call-examples__note">
         Called at the end of the first lead — {ROWS_BEFORE} rows before the lead end and {ROWS_AFTER} after,
-        for context.
+        for context. The <span className="call-marker-key">pill</span> shows where the call is called;
+        the dashed line is the lead end where it takes effect.
       </p>
       <div className="call-examples__grid">
         {examples.map(({ label, call }) => {
-          const { rows, leadEndIndex } = callExampleRows(method, call, ROWS_BEFORE, ROWS_AFTER)
+          const { rows, leadEndIndex, callIndex } = callExampleRows(method, call, ROWS_BEFORE, ROWS_AFTER)
           return (
             <div key={label} className="call-example">
               <h4 className="call-example__label">{label}</h4>
@@ -64,8 +65,10 @@ export default function CallExamples({ method, stage, workingBell, view, rowHeig
                 <div className="rows-grid" style={{ fontSize: `${exampleFont}px` }}>
                   {rows.map((row, i) => {
                     const chars = row.toArray()
+                    const cls = `row${i === leadEndIndex ? ' lead-end' : ''}${i === callIndex ? ' call-point' : ''}`
                     return (
-                      <div key={i} className={i === leadEndIndex ? 'row lead-end' : 'row'}>
+                      <div key={i} className={cls}>
+                        {i === callIndex && <span className="call-point-tag">{label}</span>}
                         {chars.map((bell, pos) => (
                           <span
                             key={pos}
@@ -86,6 +89,8 @@ export default function CallExamples({ method, stage, workingBell, view, rowHeig
                   rowHeight={Math.max(rowHeight, 12)}
                   otherBells
                   markRowIndex={leadEndIndex}
+                  callRowIndex={callIndex}
+                  callLabel={label}
                   hideLegend
                 />
               )}

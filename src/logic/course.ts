@@ -156,11 +156,29 @@ export function generateLeads(
   return { rows, callsAt, callMarks, methodAt, methodMarks, leadMethodAt, endRow: row }
 }
 
+/**
+ * How many blows *before* the lead end a call is announced ("called"). Most
+ * methods are called at the change before the lead end; Grandsire (and its
+ * relatives) are called over the treble, two blows earlier. This is the single
+ * source of truth shared by the trainer's touch mode (where the call banner
+ * flashes) and the explorer's call markers (where the "called" marker sits), so
+ * the two always agree — including the Grandsire gotcha.
+ */
+export function callAnnounceOffset(methodName: string): number {
+  return /grandsire/i.test(methodName) ? 2 : 0
+}
+
 export interface CallExample {
   /** The windowed rows: context before the lead end, the lead end, context after. */
   rows: Row[]
-  /** Index within `rows` of the called lead-end row. */
+  /** Index within `rows` of the called lead-end row (where the call takes effect). */
   leadEndIndex: number
+  /**
+   * Index within `rows` of the row where the call is announced ("called") — one
+   * change before the lead end for most methods, earlier for Grandsire. See
+   * {@link callAnnounceOffset}.
+   */
+  callIndex: number
 }
 
 /**
@@ -209,7 +227,13 @@ export function callExampleRows(
 
   const start = Math.max(0, leadEndIndex - rowsBefore)
   const end = Math.min(all.length - 1, leadEndIndex + rowsAfter)
-  return { rows: all.slice(start, end + 1), leadEndIndex: leadEndIndex - start }
+  // Where the caller announces the call — the same offset the trainer uses.
+  const callIndexAll = leadEndIndex - 1 - callAnnounceOffset(method.name)
+  return {
+    rows: all.slice(start, end + 1),
+    leadEndIndex: leadEndIndex - start,
+    callIndex: callIndexAll - start,
+  }
 }
 
 /** A working bell's coursing neighbours (all 0-based bell numbers). */
